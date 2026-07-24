@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Documents - DocManager{% endblock %}
+
+{% block page_title %}Mes Documents{% endblock %}
+
+{% block content %}
+    <!-- Messages flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Section de recherche -->
+    <div class="search-section">
+        <h3 class="mb-3">
+            <i class="bi bi-search me-2"></i>
+            Rechercher des documents
+        </h3>
+        <form method="GET" action="{{ url_for('index') }}" class="row g-3">
+            <div class="col-md-3">
+                <label for="author" class="form-label">Auteur</label>
+                <input type="text" class="form-control" id="author" name="author" 
+                       value="{{ search_author }}" placeholder="Nom de l'auteur...">
+            </div>
+            <div class="col-md-2">
+                <label for="upload_from" class="form-label">Upload à partir de</label>
+                <input type="date" class="form-control" id="upload_from" name="upload_from" 
+                       value="{{ search_upload_from }}">
+            </div>
+            <div class="col-md-2">
+                <label for="upload_to" class="form-label">Upload jusqu'à</label>
+                <input type="date" class="form-control" id="upload_to" name="upload_to" 
+                       value="{{ search_upload_to }}">
+            </div>
+            <div class="col-md-2">
+                <label for="validity_from" class="form-label">Validité à partir de</label>
+                <input type="date" class="form-control" id="validity_from" name="validity_from" 
+                       value="{{ search_validity_from }}">
+            </div>
+            <div class="col-md-2">
+                <label for="validity_to" class="form-label">Validité jusqu'à</label>
+                <input type="date" class="form-control" id="validity_to" name="validity_to" 
+                       value="{{ search_validity_to }}">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            <div class="col-12">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Réinitialiser
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Bouton Ajouter Document -->
+    <div class="d-flex justify-content-end mb-3">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDocumentModal">
+            <i class="bi bi-plus-lg me-1"></i> Ajouter un document
+        </button>
+    </div>
+    
+    <!-- Liste des documents -->
+    <div class="row">
+        {% if documents|length == 0 %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="bi bi-file-earmark-x"></i>
+                    <h3>Aucun document trouvé</h3>
+                    <p class="text-muted mt-2">
+                        Essayez de modifier vos critères de recherche ou 
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#addDocumentModal" class="text-primary">
+                            ajoutez un document
+                        </a>
+                    </p>
+                </div>
+            </div>
+        {% else %}
+            {% for doc in documents %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card document-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="document-title mb-0">
+                                    <i class="bi bi-file-pdf me-2 text-danger"></i>
+                                    {{ doc.title }}
+                                </h5>
+                                <span class="badge bg-secondary">#{{ doc.id }}</span>
+                            </div>
+                            
+                            <div class="document-meta mb-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="user-avatar me-2">
+                                        {{ doc.username[:1].upper() }}
+                                    </span>
+                                    <span><strong>Auteur:</strong> {{ doc.username }}</span>
+                                </div>
+                                <div>
+                                    <strong>Upload:</strong> 
+                                    {{ doc.upload_date[:10] if doc.upload_date else 'N/A' }}
+                                </div>
+                                {% if doc.validity_date %}
+                                    <div class="mt-1">
+                                        <strong>Valide jusqu'au:</strong> 
+                                        {{ doc.validity_date }}
+                                        {% if doc.validity_date < current_date %}
+                                            <span class="badge bg-danger ms-2">Expiré</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% if doc.content %}
+                                <p class="card-text text-muted mb-3" style="font-size: 0.875rem;">
+                                    {{ doc.content[:150] }}
+                                    {% if doc.content|length > 150 %}...{% endif %}
+                                </p>
+                            {% endif %}
+                            
+                            <div class="d-flex gap-2 mt-3">
+                                {% if doc.file_path %}
+                                    <a href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" 
+                                       target="_blank" 
+                                       class="btn btn-outline-primary btn-sm action-btn">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i> Ouvrir PDF
+                                    </a>
+                                {% endif %}
+                                {% if current_user.id == doc.user_id or current_user.role == 'admin' %}
+                                    <a href="{{ url_for('delete_document', doc_id=doc.id) }}" 
+                                       class="btn btn-outline-danger btn-sm action-btn"
+                                       onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce document ?')">
+                                        <i class="bi bi-trash me-1"></i> Supprimer
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <!-- Modal Ajouter Document -->
+    <div class="modal fade" id="addDocumentModal" tabindex="-1" aria-labelledby="addDocumentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addDocumentModalLabel">
+                        <i class="bi bi-file-earmark-plus me-2"></i>
+                        Ajouter un document
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ url_for('add_document') }}" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">
+                                Titre <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{ request.form.title if request.method == 'POST' else '' }}" 
+                                   placeholder="Titre du document..." required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Contenu (optionnel)</label>
+                            <textarea class="form-control" id="content" name="content" 
+                                      rows="3" 
+                                      placeholder="Description ou contenu du document...">
+{{ request.form.content if request.method == 'POST' else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="validity_date" class="form-label">Date de validité</label>
+                            <input type="date" class="form-control" id="validity_date" name="validity_date" 
+                                   value="{{ request.form.validity_date if request.method == 'POST' else '' }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="file" class="form-label">
+                                Fichier PDF <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".pdf" required>
+                            <div class="form-text">Seuls les fichiers PDF sont acceptés (max 16 Mo)</div>
+                        </div>
+                        
+                        <!-- Auteur caché (automatiquement l'utilisateur connecté) -->
+                        <input type="hidden" name="user_id" value="{{ current_user.id }}">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Annuler
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Ajouter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

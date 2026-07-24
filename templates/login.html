@@ -1,0 +1,54 @@
+{% extends "base_nonauth.html" %}
+
+{% block title %}Connexion - DocManager{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card card">
+        <div class="card-body">
+            <div class="login-logo">
+                <i class="bi bi-file-earmark-pdf-fill"></i>
+            </div>
+            <h3 class="login-title">DocManager</h3>
+            
+            <!-- Messages flash -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show mb-4" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Nom d'utilisateur</label>
+                    <input type="text" class="form-control form-control-lg" id="username" name="username" 
+                           placeholder="Entrez votre nom d'utilisateur" required autofocus>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label">Mot de passe</label>
+                    <input type="password" class="form-control form-control-lg" id="password" name="password" 
+                           placeholder="Entrez votre mot de passe" required>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Se connecter
+                    </button>
+                </div>
+            </form>
+            
+            <div class="mt-4 text-center">
+                <p class="text-muted mb-0">
+                    <small>© 2026 DocManager. Tous droits réservés.</small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

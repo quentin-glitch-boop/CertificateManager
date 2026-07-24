@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion Utilisateurs - DocManager{% endblock %}
+
+{% block page_title %}Gestion des Utilisateurs{% endblock %}
+
+{% block content %}
+    <!-- Messages flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="m-0">
+            <i class="bi bi-people me-2"></i>
+            Liste des utilisateurs
+        </h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="bi bi-plus-lg me-1"></i> Ajouter un utilisateur
+        </button>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom d'utilisateur</th>
+                            <th>Rôle</th>
+                            <th>Date de création</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>
+                                    <span class="user-avatar user-avatar-sm me-2">
+                                        {{ user.username[:1].upper() }}
+                                    </span>
+                                    {{ user.username }}
+                                </td>
+                                <td>
+                                    <span class="badge {% if user.role == 'admin' %}role-admin{% else %}role-user{% endif %}">
+                                        {{ user.role.upper() }}
+                                    </span>
+                                </td>
+                                <td>{{ user.created_at if user.created_at else 'N/A' }}</td>
+                                <td>
+                                    {% if current_user.id != user.id %}
+                                        <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" 
+                                           class="btn btn-sm btn-outline-primary me-2">
+                                            <i class="bi bi-pencil me-1"></i> Modifier
+                                        </a>
+                                        <a href="{{ url_for('admin_delete_user', user_id=user.id) }}" 
+                                           class="btn btn-sm btn-outline-danger"
+                                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')">
+                                            <i class="bi bi-trash me-1"></i> Supprimer
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted small">(Vous)</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Ajouter/Modifier Utilisateur -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserModalLabel">
+                        <i class="bi bi-person-plus me-2"></i>
+                        Ajouter un utilisateur
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ url_for('admin_add_user') }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                Nom d'utilisateur <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   placeholder="Nom de l'utilisateur..." required autofocus>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                Mot de passe <span class="text-danger">*</span>
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   placeholder="Mot de passe..." required>
+                            <div class="form-text">Le mot de passe doit contenir au moins 6 caractères</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Rôle</label>
+                            <select class="form-select" id="role" name="role">
+                                <option value="user" selected>Utilisateur</option>
+                                <option value="admin">Administrateur</option>
+                            </select>
+                            <div class="form-text">Les administrateurs peuvent gérer les utilisateurs</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Annuler
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Ajouter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Modifier Utilisateur (sera rempli par JavaScript si besoin) -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editUserModalLabel">
+                        <i class="bi bi-pencil me-2"></i>
+                        Modifier l'utilisateur
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="">
+                    <input type="hidden" name="user_id" id="edit_user_id">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="edit_username" class="form-label">Nom d'utilisateur</label>
+                            <input type="text" class="form-control" id="edit_username" name="username" 
+                                   placeholder="Nom de l'utilisateur..." required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_password" class="form-label">Nouveau mot de passe (optionnel)</label>
+                            <input type="password" class="form-control" id="edit_password" name="password" 
+                                   placeholder="Laisser vide pour ne pas changer">
+                            <div class="form-text">Laisser vide pour garder le mot de passe actuel</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_role" class="form-label">Rôle</label>
+                            <select class="form-select" id="edit_role" name="role">
+                                <option value="user">Utilisateur</option>
+                                <option value="admin">Administrateur</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Annuler
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Sauvegarder
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Script pour gérer l'édition des utilisateurs
+        document.addEventListener('DOMContentLoaded', function() {
+            // Récupérer les liens d'édition et configurer le modal
+            const editLinks = document.querySelectorAll('a[href*="admin_edit_user"]');
+            editLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const userId = this.href.split('/').pop();
+                    
+                    // Pour une implémentation complète, on pourrait faire une requête AJAX
+                    // Pour l'instant, on redirige vers la page d'édition
+                    window.location.href = this.href;
+                });
+            });
+        });
+    </script>
+{% endblock %}

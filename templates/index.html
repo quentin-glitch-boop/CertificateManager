@@ -24,7 +24,18 @@
             Rechercher des documents
         </h3>
         <form method="GET" action="{{ url_for('index') }}" class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label for="doc_type" class="form-label">Type de document</label>
+                <select class="form-select" id="doc_type" name="doc_type">
+                    <option value="">Tous les types</option>
+                    {% for type_id, type_config in document_types.items() %}
+                        <option value="{{ type_id }}" {% if search_type == type_id %}selected{% endif %}>
+                            {{ type_config.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label for="author" class="form-label">Auteur</label>
                 <input type="text" class="form-control" id="author" name="author" 
                        value="{{ search_author }}" placeholder="Nom de l'auteur...">
@@ -94,7 +105,12 @@
                                     <i class="bi bi-file-pdf me-2 text-danger"></i>
                                     {{ doc.title }}
                                 </h5>
-                                <span class="badge bg-secondary">#{{ doc.id }}</span>
+                                <div class="d-flex gap-1">
+                                    <span class="badge bg-secondary">#{{ doc.id }}</span>
+                                    {% if doc.type %}
+                                        <span class="badge bg-info text-dark">{{ doc.type }}</span>
+                                    {% endif %}
+                                </div>
                             </div>
                             
                             <div class="document-meta mb-3">
@@ -115,6 +131,25 @@
                                         {% if doc.validity_date < current_date %}
                                             <span class="badge bg-danger ms-2">Expiré</span>
                                         {% endif %}
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Afficher les attributs spécifiques au type -->
+                                {% if doc.type and doc.attributes %}
+                                    <div class="mt-2 document-attributes">
+                                        <strong>Détails:</strong>
+                                        {% for attr_name, attr_value in doc.attributes.items() %}
+                                            <div class="ms-3">
+                                                <small>
+                                                    {% if doc.type in document_types %}
+                                                        {{ document_types[doc.type].attributes[attr_name].label if attr_name in document_types[doc.type].attributes else attr_name }}:
+                                                    {% else %}
+                                                        {{ attr_name }}:
+                                                    {% endif %}
+                                                    {{ attr_value }}
+                                                </small>
+                                            </div>
+                                        {% endfor %}
                                     </div>
                                 {% endif %}
                             </div>
@@ -180,9 +215,25 @@
                         </div>
                         
                         <div class="mb-3">
+                            <label for="doc_type" class="form-label">Type de document</label>
+                            <select class="form-select" id="doc_type" name="doc_type" required onchange="updateDocumentTypeFields()">
+                                <option value="">-- Sélectionnez un type --</option>
+                                {% for type_id, type_config in document_types.items() %}
+                                    <option value="{{ type_id }}" {% if request.form.doc_type == type_id %}selected{% endif %}>
+                                        {{ type_config.name }} - {{ type_config.description }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
                             <label for="validity_date" class="form-label">Date de validité</label>
                             <input type="date" class="form-control" id="validity_date" name="validity_date" 
                                    value="{{ request.form.validity_date if request.method == 'POST' else '' }}">
+                        </div>
+                        
+                        <!-- Champs dynamiques pour les attributs spécifiques au type -->
+                        <div id="document_type_attributes" class="mb-3">
                         </div>
                         
                         <div class="mb-3">
@@ -208,4 +259,79 @@
             </div>
         </div>
     </div>
+
+    <!-- JavaScript pour gérer les champs dynamiques -->
+    <script>
+        function updateDocumentTypeFields() {
+            const docTypeSelect = document.getElementById('doc_type');
+            const attributesContainer = document.getElementById('document_type_attributes');
+            const selectedType = docTypeSelect.value;
+            
+            attributesContainer.innerHTML = '';
+            
+            if (!selectedType) {
+                return;
+            }
+            
+            const docTypes = {{ document_types|tojson|safe }};
+            const typeConfig = docTypes[selectedType];
+            
+            if (!typeConfig || !typeConfig.attributes) {
+                return;
+            }
+            
+            for (const [attrName, attrConfig] of Object.entries(typeConfig.attributes)) {
+                const fieldId = `doc_attr_${attrName}`;
+                const label = document.createElement('label');
+                label.htmlFor = fieldId;
+                label.className = 'form-label';
+                label.textContent = attrConfig.label + (attrConfig.required ? ' *' : '');
+                
+                let input;
+                switch (attrConfig.form_type) {
+                    case 'textarea':
+                        input = document.createElement('textarea');
+                        input.className = 'form-control';
+                        input.id = fieldId;
+                        input.name = fieldId;
+                        input.rows = 2;
+                        break;
+                    case 'date':
+                        input = document.createElement('input');
+                        input.type = 'date';
+                        input.className = 'form-control';
+                        input.id = fieldId;
+                        input.name = fieldId;
+                        break;
+                    case 'number':
+                        input = document.createElement('input');
+                        input.type = 'number';
+                        input.className = 'form-control';
+                        input.id = fieldId;
+                        input.name = fieldId;
+                        break;
+                    default:
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'form-control';
+                        input.id = fieldId;
+                        input.name = fieldId;
+                }
+                
+                if (attrConfig.required) {
+                    input.required = true;
+                }
+                
+                const div = document.createElement('div');
+                div.className = 'mb-3';
+                div.appendChild(label);
+                div.appendChild(input);
+                attributesContainer.appendChild(div);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDocumentTypeFields();
+        });
+    </script>
 {% endblock %}

@@ -76,6 +76,89 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+
+# ============================================================================
+# Systeme de types de documents extensible
+# ============================================================================
+import json
+
+# Registre des types de documents avec leurs schemas de validation
+DOCUMENT_TYPES = {
+    'certificat': {
+        'name': 'Certificat',
+        'description': 'Certificat avec societe certifiee et certificatrice',
+        'attributes': {
+            'nom_societe_certifiee': {
+                'type': 'string',
+                'label': 'Nom de la societe certifiee',
+                'required': True,
+                'form_type': 'text'
+            },
+            'societe_certificatrice': {
+                'type': 'string',
+                'label': 'Societe certificatrice',
+                'required': True,
+                'form_type': 'text'
+            },
+            'adresse': {
+                'type': 'string',
+                'label': 'Adresse de la societe',
+                'required': False,
+                'form_type': 'textarea'
+            },
+            'date_peremption': {
+                'type': 'date',
+                'label': 'Date de peremption du certificat',
+                'required': True,
+                'form_type': 'date'
+            }
+        }
+    }
+}
+
+
+def register_document_type(type_name, config):
+    DOCUMENT_TYPES[type_name] = config
+
+
+def get_document_type(type_name):
+    return DOCUMENT_TYPES.get(type_name)
+
+
+def get_document_types():
+    return DOCUMENT_TYPES
+
+
+def validate_document_attributes(type_name, attributes):
+    doc_type = get_document_type(type_name)
+    if not doc_type:
+        return False, [f"Type de document inconnu: {type_name}"]
+    
+    errors = []
+    attr_schema = doc_type.get('attributes', {})
+    
+    for attr_name, schema in attr_schema.items():
+        if schema.get('required', False):
+            if attr_name not in attributes or not attributes[attr_name]:
+                errors.append(f"{schema['label']} est obligatoire")
+    
+    for attr_name, value in attributes.items():
+        if attr_name in attr_schema:
+            expected_type = attr_schema[attr_name]['type']
+            if expected_type == 'date' and value:
+                try:
+                    datetime.strptime(value, '%Y-%m-%d')
+                except ValueError:
+                    errors.append(f"{attr_schema[attr_name]['label']} doit etre une date valide (YYYY-MM-DD)")
+            elif expected_type == 'number' and value:
+                try:
+                    float(value)
+                except ValueError:
+                    errors.append(f"{attr_schema[attr_name]['label']} doit etre un nombre")
+    
+    return len(errors) == 0, errors
+
 def init_db():
     """Initialise la base de données avec les tables nécessaires"""
     conn = get_db()
@@ -102,6 +185,8 @@ def init_db():
             upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             validity_date DATE,
             file_path TEXT,
+            type TEXT,
+            attributes TEXT,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
@@ -122,6 +207,12 @@ def init_db():
     
     if 'file_path' not in doc_columns:
         cursor.execute('ALTER TABLE documents ADD COLUMN file_path TEXT')
+    
+    if 'type' not in doc_columns:
+        cursor.execute('ALTER TABLE documents ADD COLUMN type TEXT')
+    
+    if 'attributes' not in doc_columns:
+        cursor.execute('ALTER TABLE documents ADD COLUMN attributes TEXT')
     
     # Crée un utilisateur admin par défaut si la table est vide
     cursor.execute('SELECT COUNT(*) FROM users')
@@ -164,15 +255,16 @@ def index():
     search_upload_to = request.args.get('upload_to', '')
     search_validity_from = request.args.get('validity_from', '')
     search_validity_to = request.args.get('validity_to', '')
+    search_type = request.args.get('doc_type', '')
     
     # Construire la requête SQL dynamique
     # Si l'utilisateur est admin, il voit tous les documents
     # Sinon, il ne voit que ses propres documents
     params = []
     if current_user.role == 'admin':
-        query = 'SELECT d.id, d.title, d.content, d.upload_date, d.validity_date, d.file_path, u.username FROM documents d JOIN users u ON d.user_id = u.id WHERE 1=1'
+        query = 'SELECT d.id, d.title, d.content, d.upload_date, d.validity_date, d.file_path, d.type, d.attributes, u.username FROM documents d JOIN users u ON d.user_id = u.id WHERE 1=1'
     else:
-        query = 'SELECT d.id, d.title, d.content, d.upload_date, d.validity_date, d.file_path, u.username FROM documents d JOIN users u ON d.user_id = u.id WHERE d.user_id = ?'
+        query = 'SELECT d.id, d.title, d.content, d.upload_date, d.validity_date, d.file_path, d.type, d.attributes, u.username FROM documents d JOIN users u ON d.user_id = u.id WHERE d.user_id = ?'
         params = [current_user.id]
     
     # Ajouter les filtres de recherche
@@ -196,6 +288,10 @@ def index():
         query += ' AND d.validity_date <= ?'
         params.append(search_validity_to)
     
+    if search_type:
+        query += ' AND d.type = ?'
+        params.append(search_type)
+    
     # Tri
     query += ' ORDER BY d.upload_date DESC'
     
@@ -203,16 +299,39 @@ def index():
     cursor.execute(query, params)
     documents = cursor.fetchall()
     
+    # Parser les attributs JSON
+    docs_with_attrs = []
+    for doc in documents:
+        attrs = {}
+        if doc['attributes']:
+            try:
+                attrs = json.loads(doc['attributes'])
+            except:
+                attrs = {}
+        docs_with_attrs.append({
+            'id': doc['id'],
+            'title': doc['title'],
+            'content': doc['content'],
+            'upload_date': doc['upload_date'],
+            'validity_date': doc['validity_date'],
+            'file_path': doc['file_path'],
+            'type': doc['type'],
+            'attributes': attrs,
+            'username': doc['username']
+        })
+    
     conn.close()
     
     return render_template('index.html', 
-                         documents=documents, 
+                         documents=docs_with_attrs, 
+                         document_types=get_document_types(),
                          current_date=str(date.today()),
                          search_author=search_author,
                          search_upload_from=search_upload_from,
                          search_upload_to=search_upload_to,
                          search_validity_from=search_validity_from,
-                         search_validity_to=search_validity_to)
+                         search_validity_to=search_validity_to,
+                         search_type=search_type)
 
 # Routes de login
 @app.route('/login', methods=['GET', 'POST'])
@@ -260,6 +379,7 @@ def add_document():
         title = request.form.get('title', '').strip()
         content = request.form.get('content', '').strip()
         validity_date = request.form.get('validity_date')
+        doc_type = request.form.get('doc_type', '')
         
         # L'auteur est automatiquement l'utilisateur connecté
         user_id = current_user.id
@@ -290,6 +410,23 @@ def add_document():
                     flash(f'Erreur lors de l\'upload : {str(e)}', 'error')
                     return redirect(url_for('index'))
         
+        # Récupérer les attributs spécifiques au type
+        attributes = {}
+        if doc_type:
+            doc_type_config = get_document_type(doc_type)
+            if doc_type_config:
+                for attr_name, attr_config in doc_type_config.get('attributes', {}).items():
+                    attr_value = request.form.get(f'doc_attr_{attr_name}', '').strip()
+                    if attr_value:
+                        attributes[attr_name] = attr_value
+            
+            # Valider les attributs
+            is_valid, errors = validate_document_attributes(doc_type, attributes)
+            if not is_valid:
+                for error in errors:
+                    flash(error, 'error')
+                return redirect(url_for('index'))
+        
         # Validation
         if not title:
             flash('Le titre est obligatoire', 'error')
@@ -303,9 +440,9 @@ def add_document():
                 conn = get_db()
                 cursor = conn.cursor()
                 cursor.execute('''
-                    INSERT INTO documents (title, content, user_id, validity_date, file_path)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (title, content, user_id, validity_date, db_file_path))
+                    INSERT INTO documents (title, content, user_id, validity_date, file_path, type, attributes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (title, content, user_id, validity_date, db_file_path, doc_type, json.dumps(attributes)))
                 conn.commit()
                 conn.close()
                 flash('Document ajouté avec succès !', 'success')

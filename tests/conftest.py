@@ -55,6 +55,8 @@ def client(app):
                 upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 validity_date DATE,
                 file_path TEXT,
+                type TEXT,
+                attributes TEXT,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
@@ -80,9 +82,9 @@ def client(app):
         
         # Add test document
         cursor.execute('''
-            INSERT INTO documents (title, content, user_id, validity_date, file_path)
-            VALUES (?, ?, ?, ?, ?)
-        ''', ('Test Document', 'Contenu de test', user1_id, '2026-12-31', None))
+            INSERT INTO documents (title, content, user_id, validity_date, file_path, type, attributes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', ('Test Document', 'Contenu de test', user1_id, '2026-12-31', None, 'certificat', None))
         
         conn.commit()
         conn.close()
@@ -150,6 +152,8 @@ def test_db():
             upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             validity_date DATE,
             file_path TEXT,
+            type TEXT,
+            attributes TEXT,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')

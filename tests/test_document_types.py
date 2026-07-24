@@ -31,9 +31,13 @@ class TestDocumentTypes:
         attrs = certificat['attributes']
         
         # Check all expected attributes exist
-        expected_attrs = ['nom_societe_certifiee', 'societe_certificatrice', 'adresse', 'date_peremption']
+        expected_attrs = ['nom_societe_certifiee', 'societe_certificatrice', 'adresse', 'date_peremption', 'url_telechargement']
         for attr in expected_attrs:
             assert attr in attrs, f"Attribute {attr} not found in certificat"
+        
+        # Check url_telechargement is optional
+        assert attrs['url_telechargement']['required'] == False
+        assert attrs['url_telechargement']['type'] == 'string'
         
         # Check attribute properties
         assert attrs['nom_societe_certifiee']['type'] == 'string'

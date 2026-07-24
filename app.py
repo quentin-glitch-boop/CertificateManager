@@ -87,31 +87,37 @@ import json
 DOCUMENT_TYPES = {
     'certificat': {
         'name': 'Certificat',
-        'description': 'Certificat avec societe certifiee et certificatrice',
+        'description': 'Certificat avec société certifiée et certificatrice',
         'attributes': {
             'nom_societe_certifiee': {
                 'type': 'string',
-                'label': 'Nom de la societe certifiee',
+                'label': 'Nom de la société certifiée',
                 'required': True,
                 'form_type': 'text'
             },
             'societe_certificatrice': {
                 'type': 'string',
-                'label': 'Societe certificatrice',
+                'label': 'Société certificatrice',
                 'required': True,
                 'form_type': 'text'
             },
             'adresse': {
                 'type': 'string',
-                'label': 'Adresse de la societe',
+                'label': 'Adresse de la société',
                 'required': False,
                 'form_type': 'textarea'
             },
             'date_peremption': {
                 'type': 'date',
-                'label': 'Date de peremption du certificat',
+                'label': 'Date de péremption du certificat',
                 'required': True,
                 'form_type': 'date'
+            },
+            'url_telechargement': {
+                'type': 'string',
+                'label': 'URL de téléchargement',
+                'required': False,
+                'form_type': 'text'
             }
         }
     }

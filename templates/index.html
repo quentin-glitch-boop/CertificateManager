@@ -262,6 +262,9 @@
 
     <!-- JavaScript pour gérer les champs dynamiques -->
     <script>
+        // Store form data to restore on page reload
+        const storedFormData = {{ request.form.to_dict()|tojson|safe if request.method == 'POST' else {}|tojson|safe }};
+        
         function updateDocumentTypeFields() {
             const docTypeSelect = document.getElementById('doc_type');
             const attributesContainer = document.getElementById('document_type_attributes');
@@ -282,46 +285,64 @@
             
             for (const [attrName, attrConfig] of Object.entries(typeConfig.attributes)) {
                 const fieldId = `doc_attr_${attrName}`;
+                const fieldName = fieldId;
+                
+                // Create label
                 const label = document.createElement('label');
                 label.htmlFor = fieldId;
                 label.className = 'form-label';
                 label.textContent = attrConfig.label + (attrConfig.required ? ' *' : '');
                 
+                // Create input based on type
                 let input;
                 switch (attrConfig.form_type) {
                     case 'textarea':
                         input = document.createElement('textarea');
                         input.className = 'form-control';
                         input.id = fieldId;
-                        input.name = fieldId;
+                        input.name = fieldName;
                         input.rows = 2;
+                        if (storedFormData[fieldName]) {
+                            input.value = storedFormData[fieldName];
+                        }
                         break;
                     case 'date':
                         input = document.createElement('input');
                         input.type = 'date';
                         input.className = 'form-control';
                         input.id = fieldId;
-                        input.name = fieldId;
+                        input.name = fieldName;
+                        if (storedFormData[fieldName]) {
+                            input.value = storedFormData[fieldName];
+                        }
                         break;
                     case 'number':
                         input = document.createElement('input');
                         input.type = 'number';
                         input.className = 'form-control';
                         input.id = fieldId;
-                        input.name = fieldId;
+                        input.name = fieldName;
+                        if (storedFormData[fieldName]) {
+                            input.value = storedFormData[fieldName];
+                        }
                         break;
                     default:
                         input = document.createElement('input');
                         input.type = 'text';
                         input.className = 'form-control';
                         input.id = fieldId;
-                        input.name = fieldId;
+                        input.name = fieldName;
+                        input.placeholder = attrConfig.label;
+                        if (storedFormData[fieldName]) {
+                            input.value = storedFormData[fieldName];
+                        }
                 }
                 
                 if (attrConfig.required) {
                     input.required = true;
                 }
                 
+                // Create container div
                 const div = document.createElement('div');
                 div.className = 'mb-3';
                 div.appendChild(label);
@@ -330,8 +351,16 @@
             }
         }
         
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateDocumentTypeFields();
+            
+            // If there was a form submission with errors, restore the selected type
+            const docTypeSelect = document.getElementById('doc_type');
+            if (storedFormData.doc_type) {
+                docTypeSelect.value = storedFormData.doc_type;
+                updateDocumentTypeFields();
+            }
         });
     </script>
 {% endblock %}

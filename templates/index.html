@@ -245,22 +245,22 @@
                                 <textarea class="form-control" id="doc_attr_{{ attr_name }}" 
                                           name="doc_attr_{{ attr_name }}" 
                                           rows="2"
-                                          {% if request.method == 'POST' and request.form.get('doc_attr_' + attr_name) %}value="{{ request.form.get('doc_attr_' + attr_name) }}"{% endif %}>{% if request.method == 'POST' %}{{ request.form.get('doc_attr_' + attr_name) }}{% endif %}</textarea>
+                                          {% if attr_config.required %}required{% endif %}>{{ request.form.get('doc_attr_' + attr_name, '') if request.method == 'POST' else '' }}</textarea>
                                 {% elif attr_config.form_type == 'date' %}
                                 <input type="date" class="form-control" id="doc_attr_{{ attr_name }}" 
                                        name="doc_attr_{{ attr_name }}" 
-                                       value="{{ request.form.get('doc_attr_' + attr_name) if request.method == 'POST' else '' }}"
+                                       value="{{ request.form.get('doc_attr_' + attr_name, '') if request.method == 'POST' else '' }}"
                                        {% if attr_config.required %}required{% endif %}>
                                 {% elif attr_config.form_type == 'number' %}
                                 <input type="number" class="form-control" id="doc_attr_{{ attr_name }}" 
                                        name="doc_attr_{{ attr_name }}" 
-                                       value="{{ request.form.get('doc_attr_' + attr_name) if request.method == 'POST' else '' }}"
+                                       value="{{ request.form.get('doc_attr_' + attr_name, '') if request.method == 'POST' else '' }}"
                                        {% if attr_config.required %}required{% endif %}>
                                 {% else %}
                                 <input type="text" class="form-control" id="doc_attr_{{ attr_name }}" 
                                        name="doc_attr_{{ attr_name }}" 
                                        placeholder="{{ attr_config.label }}"
-                                       value="{{ request.form.get('doc_attr_' + attr_name) if request.method == 'POST' else '' }}"
+                                       value="{{ request.form.get('doc_attr_' + attr_name, '') if request.method == 'POST' else '' }}"
                                        {% if attr_config.required %}required{% endif %}>
                                 {% endif %}
                             </div>

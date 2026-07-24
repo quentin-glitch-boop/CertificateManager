@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, abort, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, abort, jsonify, session, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -22,6 +22,26 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limite à 16 Mo
+
+# Contexte global pour les templates
+@app.context_processor
+def inject_global_vars():
+    """Injecte des variables globales dans tous les templates"""
+    try:
+        from translations import get_current_language, TRANSLATIONS, AVAILABLE_LANGUAGES, get_translation
+        lang = get_current_language()
+        return {
+            'current_lang': lang,
+            'available_languages': AVAILABLE_LANGUAGES,
+            't': lambda key: get_translation(key, lang)
+        }
+    except ImportError:
+        # translations module not available (e.g., during testing)
+        return {
+            'current_lang': 'fr',
+            'available_languages': {'fr': 'Français', 'en': 'English'},
+            't': lambda key: key
+        }
 
 # Initialisation Flask-Login
 login_manager = LoginManager()
@@ -376,6 +396,23 @@ def logout():
     flash('Déconnexion réussie', 'success')
     return redirect(url_for('login'))
 
+@app.route('/set_language/<lang>')
+def set_language_route(lang):
+    """Change la langue de l'application"""
+    try:
+        from translations import TRANSLATIONS, set_language as set_lang
+        if lang in TRANSLATIONS:
+            set_lang(lang)
+            # Store in session
+            session['language'] = lang
+            # Create response with cookie
+            resp = make_response(redirect(request.referrer or url_for('index')))
+            resp.set_cookie('language', lang, max_age=60*60*24*365)  # 1 year
+            return resp
+    except ImportError:
+        pass
+    return redirect(request.referrer or url_for('index'))
+
 # Routes documents
 @app.route('/add', methods=['GET', 'POST'])
 @login_required
@@ -423,8 +460,8 @@ def add_document():
             if doc_type_config:
                 for attr_name, attr_config in doc_type_config.get('attributes', {}).items():
                     attr_value = request.form.get(f'doc_attr_{attr_name}', '').strip()
-                    if attr_value:
-                        attributes[attr_name] = attr_value
+                    # Always include the attribute, even if empty (for optional fields)
+                    attributes[attr_name] = attr_value
             
             # Valider les attributs
             is_valid, errors = validate_document_attributes(doc_type, attributes)

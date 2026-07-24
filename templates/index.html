@@ -216,7 +216,7 @@
                         
                         <div class="mb-3">
                             <label for="doc_type" class="form-label">Type de document</label>
-                            <select class="form-select" id="doc_type" name="doc_type" required onchange="updateDocumentTypeFields()">
+                            <select class="form-select" id="doc_type" name="doc_type" required onchange="toggleDocumentTypeFields()">
                                 <option value="">-- Sélectionnez un type --</option>
                                 {% for type_id, type_config in document_types.items() %}
                                     <option value="{{ type_id }}" {% if request.form.doc_type == type_id %}selected{% endif %}>
@@ -233,8 +233,40 @@
                         </div>
                         
                         <!-- Champs dynamiques pour les attributs spécifiques au type -->
-                        <div id="document_type_attributes" class="mb-3">
+                        {% for type_id, type_config in document_types.items() %}
+                        <div id="attrs_{{ type_id }}" class="document-type-fields mb-3" style="display: none;">
+                            {% for attr_name, attr_config in type_config.attributes.items() %}
+                            <div class="mb-3">
+                                <label for="doc_attr_{{ attr_name }}" class="form-label">
+                                    {{ attr_config.label }}
+                                    {% if attr_config.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {% if attr_config.form_type == 'textarea' %}
+                                <textarea class="form-control" id="doc_attr_{{ attr_name }}" 
+                                          name="doc_attr_{{ attr_name }}" 
+                                          rows="2"
+                                          {% if request.method == 'POST' and request.form.get('doc_attr_' + attr_name) %}value="{{ request.form.get('doc_attr_' + attr_name) }}"{% endif %}>{% if request.method == 'POST' %}{{ request.form.get('doc_attr_' + attr_name) }}{% endif %}</textarea>
+                                {% elif attr_config.form_type == 'date' %}
+                                <input type="date" class="form-control" id="doc_attr_{{ attr_name }}" 
+                                       name="doc_attr_{{ attr_name }}" 
+                                       value="{{ request.form.get('doc_attr_' + attr_name) if request.method == 'POST' else '' }}"
+                                       {% if attr_config.required %}required{% endif %}>
+                                {% elif attr_config.form_type == 'number' %}
+                                <input type="number" class="form-control" id="doc_attr_{{ attr_name }}" 
+                                       name="doc_attr_{{ attr_name }}" 
+                                       value="{{ request.form.get('doc_attr_' + attr_name) if request.method == 'POST' else '' }}"
+                                       {% if attr_config.required %}required{% endif %}>
+                                {% else %}
+                                <input type="text" class="form-control" id="doc_attr_{{ attr_name }}" 
+                                       name="doc_attr_{{ attr_name }}" 
+                                       placeholder="{{ attr_config.label }}"
+                                       value="{{ request.form.get('doc_attr_' + attr_name) if request.method == 'POST' else '' }}"
+                                       {% if attr_config.required %}required{% endif %}>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
                         </div>
+                        {% endfor %}
                         
                         <div class="mb-3">
                             <label for="file" class="form-label">
@@ -260,106 +292,33 @@
         </div>
     </div>
 
-    <!-- JavaScript pour gérer les champs dynamiques -->
+    <!-- JavaScript pour afficher/cacher les champs selon le type -->
     <script>
-        // Store form data to restore on page reload
-        const storedFormData = {{ request.form.to_dict()|tojson|safe if request.method == 'POST' else {}|tojson|safe }};
-        
-        function updateDocumentTypeFields() {
+        function toggleDocumentTypeFields() {
             const docTypeSelect = document.getElementById('doc_type');
-            const attributesContainer = document.getElementById('document_type_attributes');
             const selectedType = docTypeSelect.value;
             
-            attributesContainer.innerHTML = '';
+            // Hide all type field groups
+            const allFieldGroups = document.querySelectorAll('.document-type-fields');
+            allFieldGroups.forEach(function(group) {
+                group.style.display = 'none';
+            });
             
-            if (!selectedType) {
-                return;
-            }
-            
-            const docTypes = {{ document_types|tojson|safe }};
-            const typeConfig = docTypes[selectedType];
-            
-            if (!typeConfig || !typeConfig.attributes) {
-                return;
-            }
-            
-            for (const [attrName, attrConfig] of Object.entries(typeConfig.attributes)) {
-                const fieldId = `doc_attr_${attrName}`;
-                const fieldName = fieldId;
-                
-                // Create label
-                const label = document.createElement('label');
-                label.htmlFor = fieldId;
-                label.className = 'form-label';
-                label.textContent = attrConfig.label + (attrConfig.required ? ' *' : '');
-                
-                // Create input based on type
-                let input;
-                switch (attrConfig.form_type) {
-                    case 'textarea':
-                        input = document.createElement('textarea');
-                        input.className = 'form-control';
-                        input.id = fieldId;
-                        input.name = fieldName;
-                        input.rows = 2;
-                        if (storedFormData[fieldName]) {
-                            input.value = storedFormData[fieldName];
-                        }
-                        break;
-                    case 'date':
-                        input = document.createElement('input');
-                        input.type = 'date';
-                        input.className = 'form-control';
-                        input.id = fieldId;
-                        input.name = fieldName;
-                        if (storedFormData[fieldName]) {
-                            input.value = storedFormData[fieldName];
-                        }
-                        break;
-                    case 'number':
-                        input = document.createElement('input');
-                        input.type = 'number';
-                        input.className = 'form-control';
-                        input.id = fieldId;
-                        input.name = fieldName;
-                        if (storedFormData[fieldName]) {
-                            input.value = storedFormData[fieldName];
-                        }
-                        break;
-                    default:
-                        input = document.createElement('input');
-                        input.type = 'text';
-                        input.className = 'form-control';
-                        input.id = fieldId;
-                        input.name = fieldName;
-                        input.placeholder = attrConfig.label;
-                        if (storedFormData[fieldName]) {
-                            input.value = storedFormData[fieldName];
-                        }
+            // Show the selected type's fields
+            if (selectedType) {
+                const selectedGroup = document.getElementById('attrs_' + selectedType);
+                if (selectedGroup) {
+                    selectedGroup.style.display = 'block';
                 }
-                
-                if (attrConfig.required) {
-                    input.required = true;
-                }
-                
-                // Create container div
-                const div = document.createElement('div');
-                div.className = 'mb-3';
-                div.appendChild(label);
-                div.appendChild(input);
-                attributesContainer.appendChild(div);
             }
         }
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            updateDocumentTypeFields();
-            
-            // If there was a form submission with errors, restore the selected type
             const docTypeSelect = document.getElementById('doc_type');
-            if (storedFormData.doc_type) {
-                docTypeSelect.value = storedFormData.doc_type;
-                updateDocumentTypeFields();
+            // Trigger change event to show fields for pre-selected type
+            if (docTypeSelect.value) {
+                toggleDocumentTypeFields();
             }
         });
     </script>

@@ -688,14 +688,14 @@
                 const gridElement = document.getElementById('dashboardGrid');
                 
                 // Initialiser GridStack avec la bonne configuration
-                // Note: removable est désactivé par défaut, activé en mode édition
+                // Note: removable sera contrôlé dynamiquement via enableRemove()
                 grid = GridStack.init({
                     float: false,
                     cellHeight: 70,
                     margin: 10,
                     minRow: 1,
                     acceptWidgets: true,
-                    removable: false,  // Désactivé par défaut
+                    removable: true,  // Activation dynamique via enableRemove()
                     removeTimeout: 100,
                     oneColumnMode: 'mobile'
                 }, gridElement);
@@ -1221,7 +1221,7 @@
             if (grid) {
                 grid.enableMove(true);
                 grid.enableResize(true);
-                grid.setRemovable(true);  // Utiliser setRemovable au lieu de enableRemove
+                grid.enableRemove(true);  // GridStack v7: enableRemove
             }
             
         } else {
@@ -1241,7 +1241,7 @@
             if (grid) {
                 grid.enableMove(false);
                 grid.enableResize(false);
-                grid.setRemovable(false);  // Utiliser setRemovable au lieu de enableRemove
+                grid.enableRemove(false);  // GridStack v7: enableRemove
             }
             
             // Annuler les changements non sauvegardés

@@ -69,11 +69,14 @@
         opacity: 1;
     }
     
-    .grid-stack-item-content {
-        padding: 20px;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
+    /* Edit-only actions (remove button) - only visible in edit mode */
+    .widget-edit-actions {
+        display: none;
+        margin-left: auto;
+    }
+    
+    .grid-stack-item.edit-mode .widget-edit-actions {
+        display: block;
     }
     
     .widget-header {
@@ -83,6 +86,14 @@
         margin-bottom: 15px;
         padding-bottom: 10px;
         border-bottom: 1px solid #e5e7eb;
+        position: relative;
+    }
+    
+    .grid-stack-item-content {
+        padding: 20px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
     
     .widget-title {
@@ -677,24 +688,22 @@
                 const gridElement = document.getElementById('dashboardGrid');
                 
                 // Initialiser GridStack avec la bonne configuration
-                // Note: On initialise toujours avec les capacités activées,
-                // puis on les désactive si on n'est pas en mode édition
+                // Note: removable est désactivé par défaut, activé en mode édition
                 grid = GridStack.init({
                     float: false,
                     cellHeight: 70,
                     margin: 10,
                     minRow: 1,
                     acceptWidgets: true,
-                    removable: true,
+                    removable: false,  // Désactivé par défaut
                     removeTimeout: 100,
                     oneColumnMode: 'mobile'
                 }, gridElement);
                 
-                // Appliquer l'état initial (non-édition par défaut)
+                // Désactiver par défaut (non-édition)
                 if (grid) {
                     grid.enableMove(false);
                     grid.enableResize(false);
-                    grid.enableRemove(false);
                     
                     // Appliquer les positions depuis la config
                     currentConfig.layout.forEach(widget => {
@@ -780,9 +789,11 @@
                         <span>${widgetName}</span>
                     </div>
                     <div class="widget-actions">
-                        <button class="widget-action-btn configure" onclick="configureWidget('${widgetConfig.widget_id}')">
+                        <button class="widget-action-btn configure" onclick="configureWidget('${widgetConfig.widget_id}')" title="${t.configure}">
                             <i class="bi bi-gear"></i>
                         </button>
+                    </div>
+                    <div class="widget-edit-actions">
                         <button class="widget-action-btn remove" onclick="removeWidget('${widgetConfig.widget_id}')" title="${t.remove}">
                             <i class="bi bi-x"></i>
                         </button>
@@ -1210,7 +1221,7 @@
             if (grid) {
                 grid.enableMove(true);
                 grid.enableResize(true);
-                grid.enableRemove(true);
+                grid.setRemovable(true);  // Utiliser setRemovable au lieu de enableRemove
             }
             
         } else {
@@ -1230,7 +1241,7 @@
             if (grid) {
                 grid.enableMove(false);
                 grid.enableResize(false);
-                grid.enableRemove(false);
+                grid.setRemovable(false);  // Utiliser setRemovable au lieu de enableRemove
             }
             
             // Annuler les changements non sauvegardés

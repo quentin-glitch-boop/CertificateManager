@@ -15,10 +15,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      - name: Display workspace
+        run: |
+          echo "Workspace: ${GITHUB_WORKSPACE}"
+          ls -la ${GITHUB_WORKSPACE}
+          pwd
+          
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+          
+      - name: Display Python info
+        run: |
+          python --version
+          pip --version
           
       - name: Install dependencies
         run: |

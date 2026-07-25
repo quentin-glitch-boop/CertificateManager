@@ -32,6 +32,43 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
+    /* Poignée de redimensionnement pour GridStack */
+    .grid-stack-item .grid-stack-item-content {
+        position: relative;
+    }
+    
+    .grid-stack-item:not(.gs-no-resize)::after {
+        content: '';
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        right: 0;
+        bottom: 0;
+        background: var(--primary-color);
+        border-radius: 0 0 4px 0;
+        cursor: nwse-resize;
+        z-index: 10;
+    }
+    
+    /* Style en mode édition */
+    .grid-stack-item.edit-mode {
+        border: 2px dashed var(--primary-color);
+    }
+    
+    /* Widget actions visibility */
+    .widget-actions {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .grid-stack-item:hover .widget-actions {
+        opacity: 1;
+    }
+    
+    .grid-stack-item.edit-mode .widget-actions {
+        opacity: 1;
+    }
+    
     .grid-stack-item-content {
         padding: 20px;
         height: 100%;
@@ -640,25 +677,24 @@
                 const gridElement = document.getElementById('dashboardGrid');
                 
                 // Initialiser GridStack avec la bonne configuration
+                // Note: On initialise toujours avec les capacités activées,
+                // puis on les désactive si on n'est pas en mode édition
                 grid = GridStack.init({
                     float: false,
                     cellHeight: 70,
                     margin: 10,
                     minRow: 1,
                     acceptWidgets: true,
-                    removable: isEditMode,
+                    removable: true,
                     removeTimeout: 100,
-                    oneColumnMode: 'mobile',
-                    staticGrid: !isEditMode,
-                    disableDrag: !isEditMode,
-                    disableResize: !isEditMode
+                    oneColumnMode: 'mobile'
                 }, gridElement);
                 
-                // Forcer le repositionnement des widgets
-                if (grid && grid.getGridItems().length > 0) {
-                    grid.enableMove(isEditMode);
-                    grid.enableResize(isEditMode);
-                    grid.enableRemove(isEditMode);
+                // Appliquer l'état initial (non-édition par défaut)
+                if (grid) {
+                    grid.enableMove(false);
+                    grid.enableResize(false);
+                    grid.enableRemove(false);
                     
                     // Appliquer les positions depuis la config
                     currentConfig.layout.forEach(widget => {
@@ -703,6 +739,14 @@
             addWidgetToGrid(widget);
         });
         
+        // Appliquer le mode édition si actif
+        if (isEditMode) {
+            document.querySelectorAll('.grid-stack-item').forEach(item => {
+                item.classList.add('edit-mode');
+                item.style.cursor = 'move';
+            });
+        }
+        
         // Ne pas cacher le loading ici, ça sera fait dans initDashboard
     }
     
@@ -714,31 +758,19 @@
         const widgetIcon = widgetInfo.icon;
         
         const gridItem = document.createElement('div');
-        gridItem.className = 'grid-stack-item';
+        gridItem.className = 'grid-stack-item' + (isEditMode ? ' edit-mode' : '');
         gridItem.setAttribute('gs-w', widgetConfig.w || widgetInfo.default_size.w);
         gridItem.setAttribute('gs-h', widgetConfig.h || widgetInfo.default_size.h);
         gridItem.setAttribute('gs-x', widgetConfig.x || 0);
         gridItem.setAttribute('gs-y', widgetConfig.y || 0);
         gridItem.setAttribute('data-widget-id', widgetConfig.widget_id);
         gridItem.setAttribute('gs-auto-position', 'false');
+        gridItem.setAttribute('gs-removable', 'true');
         
-        // Définir les attributs de contrôle
-        const noMove = isEditMode ? 'false' : 'true';
-        const noResize = isEditMode ? 'false' : 'true';
-        const locked = isEditMode ? 'false' : 'true';
-        
-        gridItem.setAttribute('gs-no-move', noMove);
-        gridItem.setAttribute('gs-no-resize', noResize);
-        gridItem.setAttribute('gs-locked', locked);
-        
-        // Ajouter un style de positionnement de secours (si GridStack ne fonctionne pas)
-        const width = (widgetConfig.w || widgetInfo.default_size.w) * 100 + 20;
-        const height = (widgetConfig.h || widgetInfo.default_size.h) * 70 + 40;
-        const left = (widgetConfig.x || 0) * 100 + 20;
-        const top = (widgetConfig.y || 0) * 70 + 20;
-        
-        gridItem.style.minWidth = width + 'px';
-        gridItem.style.minHeight = height + 'px';
+        // Style pour la poignée de redimensionnement (visible en mode édition)
+        if (isEditMode) {
+            gridItem.style.cursor = 'move';
+        }
         
         gridItem.innerHTML = `
             <div class="grid-stack-item-content">
@@ -751,7 +783,7 @@
                         <button class="widget-action-btn configure" onclick="configureWidget('${widgetConfig.widget_id}')">
                             <i class="bi bi-gear"></i>
                         </button>
-                        <button class="widget-action-btn remove" onclick="removeWidget('${widgetConfig.widget_id}')">
+                        <button class="widget-action-btn remove" onclick="removeWidget('${widgetConfig.widget_id}')" title="${t.remove}">
                             <i class="bi bi-x"></i>
                         </button>
                     </div>
@@ -1168,12 +1200,17 @@
             // Sauvegarder la config originale
             originalConfig = _.cloneDeep(currentConfig);
             
+            // Ajouter la classe edit-mode aux widgets
+            document.querySelectorAll('.grid-stack-item').forEach(item => {
+                item.classList.add('edit-mode');
+                item.style.cursor = 'move';
+            });
+            
             // Activer le drag & drop dans GridStack
             if (grid) {
                 grid.enableMove(true);
                 grid.enableResize(true);
                 grid.enableRemove(true);
-                grid.setStatic(false);
             }
             
         } else {
@@ -1183,12 +1220,17 @@
             toggleBtn.classList.remove('btn-primary');
             toggleBtn.classList.add('btn-outline-primary');
             
+            // Retirer la classe edit-mode des widgets
+            document.querySelectorAll('.grid-stack-item').forEach(item => {
+                item.classList.remove('edit-mode');
+                item.style.cursor = '';
+            });
+            
             // Désactiver le drag & drop dans GridStack
             if (grid) {
                 grid.enableMove(false);
                 grid.enableResize(false);
                 grid.enableRemove(false);
-                grid.setStatic(true);
             }
             
             // Annuler les changements non sauvegardés
@@ -1371,18 +1413,23 @@
     function removeWidget(widgetId) {
         if (!isEditMode) return;
         
+        // Supprimer l'élément du DOM via GridStack
+        const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"]`);
+        if (widgetElement && grid) {
+            try {
+                // GridStack v7: remove the widget
+                grid.remove(widgetElement, true); // true = remove from DOM
+            } catch (e) {
+                console.error('Error removing widget:', e);
+            }
+        }
+        
         // Retirer du layout
         currentConfig.layout = currentConfig.layout.filter(w => w.widget_id !== widgetId);
         
         // Désactiver dans les widgets
         if (currentConfig.widgets[widgetId]) {
             currentConfig.widgets[widgetId].enabled = false;
-        }
-        
-        // Supprimer l'élément du DOM
-        const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"]`);
-        if (widgetElement) {
-            grid.remove(widgetElement, false);
         }
         
         debouncedSaveConfig();

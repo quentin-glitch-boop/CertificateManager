@@ -17,11 +17,19 @@ DATABASE = os.path.join(os.path.dirname(__file__), 'documents.db')
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'pdf'}
 
-# Assurer que le dossier d'upload existe
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Assurer que le dossier d'upload existe (lazy creation to avoid issues on read-only filesystems)
+def ensure_upload_folder():
+    """Crée le dossier d'upload s'il n'existe pas"""
+    try:
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    except Exception:
+        pass  # Ignorer les erreurs sur les systèmes de fichiers en lecture seule
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limite à 16 Mo
+
+# Créer le dossier d'upload au démarrage (si possible)
+ensure_upload_folder()
 
 # Contexte global pour les templates
 @app.context_processor

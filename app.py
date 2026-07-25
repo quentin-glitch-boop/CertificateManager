@@ -25,7 +25,10 @@ def ensure_upload_folder():
         static_dir = os.path.dirname(UPLOAD_FOLDER)
         os.makedirs(static_dir, exist_ok=True)
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    except Exception:
+    except Exception as e:
+        # Log the error for debugging
+        import sys
+        print(f"Warning: Could not create upload folder: {e}", file=sys.stderr)
         pass  # Ignorer les erreurs sur les systèmes de fichiers en lecture seule
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER

@@ -21,6 +21,9 @@ ALLOWED_EXTENSIONS = {'pdf'}
 def ensure_upload_folder():
     """Crée le dossier d'upload s'il n'existe pas"""
     try:
+        # Créer le répertoire parent (static/) s'il n'existe pas
+        static_dir = os.path.dirname(UPLOAD_FOLDER)
+        os.makedirs(static_dir, exist_ok=True)
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     except Exception:
         pass  # Ignorer les erreurs sur les systèmes de fichiers en lecture seule

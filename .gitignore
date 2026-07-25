@@ -37,3 +37,20 @@ github_credentials_for_vibe.txt
 
 # Logs
 *.log
+
+# Docker
+# Note: Dockerfile and docker-compose.yml are committed
+# Only ignore override files and generated data
+.data/
+nginx/ssl/
+
+# Environment files (only .env.example is committed as template)
+.env
+.env.dev
+.env.staging
+.env.prod
+
+# SQLite data files
+*.db
+*.db-shm
+*.db-wal

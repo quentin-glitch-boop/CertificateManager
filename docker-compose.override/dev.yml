@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  app:
+    volumes:
+      - ./:/app
+    command: >
+      sh -c "pip install -r requirements.txt &&
+             gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 --reload app:app"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    ports:
+      - "5000:8000"
+
+  db:
+    volumes:
+      - ../data/dev:/var/lib/sqlite

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  app:
+    volumes:
+      - ./:/app
+      - ../data/staging:/app/static/uploads
+      - ../data/staging:/app
+    command: >
+      gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 app:app
+    environment:
+      - FLASK_ENV=staging
+    ports:
+      - "5001:8000"
+
+  db:
+    volumes:
+      - ../data/staging:/var/lib/sqlite

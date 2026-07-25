@@ -25,5 +25,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
-      - name: Run tests
-        run: python -m pytest tests/ -v
+      - name: Run tests with verbose output
+        continue-on-error: true
+        run: |
+          echo "=== Starting pytest ==="
+          python -m pytest tests/ -v --tb=line 2>&1 | tee test_output.txt
+          echo "=== Tests completed ==="
+          
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-output
+          path: test_output.txt

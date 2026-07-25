@@ -637,23 +637,49 @@
         // Initialiser GridStack APRES avoir ajouté les widgets au DOM
         setTimeout(() => {
             try {
+                const gridElement = document.getElementById('dashboardGrid');
+                
+                // Initialiser GridStack avec la bonne configuration
                 grid = GridStack.init({
                     float: false,
-                    cellHeight: '70px',
-                    minRow: 1,
+                    cellHeight: 70,
                     margin: 10,
+                    minRow: 1,
                     acceptWidgets: true,
-                    removable: true,
+                    removable: isEditMode,
                     removeTimeout: 100,
                     oneColumnMode: 'mobile',
-                    staticGrid: !isEditMode
-                });
+                    staticGrid: !isEditMode,
+                    disableDrag: !isEditMode,
+                    disableResize: !isEditMode
+                }, gridElement);
+                
+                // Forcer le repositionnement des widgets
+                if (grid && grid.getGridItems().length > 0) {
+                    grid.enableMove(isEditMode);
+                    grid.enableResize(isEditMode);
+                    grid.enableRemove(isEditMode);
+                    
+                    // Appliquer les positions depuis la config
+                    currentConfig.layout.forEach(widget => {
+                        const item = gridElement.querySelector(`[data-widget-id="${widget.widget_id}"]`);
+                        if (item) {
+                            grid.update(item, {
+                                x: widget.x || 0,
+                                y: widget.y || 0,
+                                w: widget.w || availableWidgets[widget.widget_id].default_size.w,
+                                h: widget.h || availableWidgets[widget.widget_id].default_size.h
+                            });
+                        }
+                    });
+                }
                 
                 // Charger les données des widgets
                 loadAllWidgetsData();
                 hideLoading();
             } catch (error) {
                 console.error('Erreur GridStack:', error);
+                console.log('Stack trace:', error.stack);
                 // Essayez de charger les données quand même
                 loadAllWidgetsData();
                 hideLoading();
@@ -1120,8 +1146,13 @@
         });
     }
     
-    function toggleEditMode() {
-        isEditMode = !isEditMode;
+    function toggleEditMode(forceOff = null) {
+        // Si on force la désactivation, ignorer l'inversion
+        if (forceOff !== null) {
+            isEditMode = forceOff;
+        } else {
+            isEditMode = !isEditMode;
+        }
         
         const editModeToolbar = document.getElementById('editModeToolbar');
         const editModeText = document.getElementById('editModeText');
@@ -1137,19 +1168,13 @@
             // Sauvegarder la config originale
             originalConfig = _.cloneDeep(currentConfig);
             
-            // Activer le drag & drop
+            // Activer le drag & drop dans GridStack
             if (grid) {
-                grid.enableMove();
-                grid.enableResize();
-                grid.enableRemove();
+                grid.enableMove(true);
+                grid.enableResize(true);
+                grid.enableRemove(true);
+                grid.setStatic(false);
             }
-            
-            // Mettre à jour les attributs des widgets existants
-            document.querySelectorAll('.grid-stack-item').forEach(item => {
-                item.setAttribute('gs-no-move', 'false');
-                item.setAttribute('gs-no-resize', 'false');
-                item.setAttribute('gs-locked', 'false');
-            });
             
         } else {
             // Désactiver le mode édition
@@ -1158,31 +1183,34 @@
             toggleBtn.classList.remove('btn-primary');
             toggleBtn.classList.add('btn-outline-primary');
             
-            // Désactiver le drag & drop
+            // Désactiver le drag & drop dans GridStack
             if (grid) {
-                grid.disableMove();
-                grid.disableResize();
-                grid.disableRemove();
+                grid.enableMove(false);
+                grid.enableResize(false);
+                grid.enableRemove(false);
+                grid.setStatic(true);
             }
-            
-            // Mettre à jour les attributs
-            document.querySelectorAll('.grid-stack-item').forEach(item => {
-                item.setAttribute('gs-no-move', 'true');
-                item.setAttribute('gs-no-resize', 'true');
-                item.setAttribute('gs-locked', 'true');
-            });
             
             // Annuler les changements non sauvegardés
             if (originalConfig) {
                 currentConfig = _.cloneDeep(originalConfig);
                 renderDashboard(currentConfig);
                 
-                // Recharger GridStack après avoir ré-rendu
+                // Réappliquer les positions après ré-rendu
                 setTimeout(() => {
                     if (grid) {
-                        grid.enableMove(false);
-                        grid.enableResize(false);
-                        grid.enableRemove(false);
+                        currentConfig.layout.forEach(widget => {
+                            const gridElement = document.getElementById('dashboardGrid');
+                            const item = gridElement.querySelector(`[data-widget-id="${widget.widget_id}"]`);
+                            if (item) {
+                                grid.update(item, {
+                                    x: widget.x || 0,
+                                    y: widget.y || 0,
+                                    w: widget.w || availableWidgets[widget.widget_id].default_size.w,
+                                    h: widget.h || availableWidgets[widget.widget_id].default_size.h
+                                });
+                            }
+                        });
                     }
                 }, 100);
                 
@@ -1200,27 +1228,25 @@
         showSaveStatus(t.saving);
         
         // Extraire la configuration du grid
-        const gridItems = grid.getGridItems();
+        const gridItems = grid ? grid.getGridItems() : [];
         const layout = [];
         
         gridItems.forEach(item => {
             const widgetId = item.getAttribute('data-widget-id');
             if (widgetId) {
-                const gs = item.getAttribute('gs');
-                let gsAttrs = {};
-                if (gs) {
-                    gs.split(';').forEach(pair => {
-                        const [key, value] = pair.split(':');
-                        gsAttrs[key] = parseInt(value);
-                    });
-                }
+                // GridStack v7: get position from the grid item
+                const node = item.gridstackNode;
+                let x = node ? node.x : parseInt(item.getAttribute('gs-x')) || 0;
+                let y = node ? node.y : parseInt(item.getAttribute('gs-y')) || 0;
+                let w = node ? node.w : parseInt(item.getAttribute('gs-w')) || availableWidgets[widgetId].default_size.w;
+                let h = node ? node.h : parseInt(item.getAttribute('gs-h')) || availableWidgets[widgetId].default_size.h;
                 
                 layout.push({
                     widget_id: widgetId,
-                    x: gsAttrs.x || 0,
-                    y: gsAttrs.y || 0,
-                    w: gsAttrs.w || availableWidgets[widgetId].default_size.w,
-                    h: gsAttrs.h || availableWidgets[widgetId].default_size.h
+                    x: x,
+                    y: y,
+                    w: w,
+                    h: h
                 });
             }
         });
@@ -1246,6 +1272,8 @@
             } else {
                 showSaveStatus(t.config_saved);
                 originalConfig = _.cloneDeep(configToSave);
+                // Quitter le mode édition après sauvegarde
+                toggleEditMode(false);
             }
         })
         .catch(error => {
@@ -1254,8 +1282,11 @@
     }
     
     function cancelEditMode() {
-        isEditMode = false;
-        toggleEditMode();
+        // Annuler les changements et quitter le mode édition
+        if (originalConfig) {
+            currentConfig = _.cloneDeep(originalConfig);
+        }
+        toggleEditMode(false);
     }
     
     function showSaveStatus(message, isError = false) {

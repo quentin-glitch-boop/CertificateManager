@@ -688,14 +688,14 @@
                 const gridElement = document.getElementById('dashboardGrid');
                 
                 // Initialiser GridStack avec la bonne configuration
-                // Note: removable sera contrôlé dynamiquement via enableRemove()
+                // Note: removable sera contrôlé dynamiquement via gs-removable attribute
                 grid = GridStack.init({
                     float: false,
                     cellHeight: 70,
                     margin: 10,
                     minRow: 1,
                     acceptWidgets: true,
-                    removable: true,  // Activation dynamique via enableRemove()
+                    removable: false,  // Désactivé par défaut, contrôlé via gs-removable
                     removeTimeout: 100,
                     oneColumnMode: 'mobile'
                 }, gridElement);
@@ -774,7 +774,7 @@
         gridItem.setAttribute('gs-y', widgetConfig.y || 0);
         gridItem.setAttribute('data-widget-id', widgetConfig.widget_id);
         gridItem.setAttribute('gs-auto-position', 'false');
-        gridItem.setAttribute('gs-removable', 'true');
+        gridItem.setAttribute('gs-removable', isEditMode ? 'true' : 'false');
         
         // Style pour la poignée de redimensionnement (visible en mode édition)
         if (isEditMode) {
@@ -1221,7 +1221,10 @@
             if (grid) {
                 grid.enableMove(true);
                 grid.enableResize(true);
-                grid.enableRemove(true);  // GridStack v7: enableRemove
+                // Activer la suppression sur tous les widgets en mode édition
+                document.querySelectorAll('.grid-stack-item').forEach(item => {
+                    item.setAttribute('gs-removable', 'true');
+                });
             }
             
         } else {
@@ -1241,7 +1244,10 @@
             if (grid) {
                 grid.enableMove(false);
                 grid.enableResize(false);
-                grid.enableRemove(false);  // GridStack v7: enableRemove
+                // Désactiver la suppression sur tous les widgets
+                document.querySelectorAll('.grid-stack-item').forEach(item => {
+                    item.setAttribute('gs-removable', 'false');
+                });
             }
             
             // Annuler les changements non sauvegardés

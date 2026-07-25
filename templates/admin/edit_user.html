@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Modifier Utilisateur - DocManager{% endblock %}
+{% block title %}{{ t('edit_user') }} - {{ t('doc_manager') }}{% endblock %}
 
-{% block page_title %}Modifier l'utilisateur{% endblock %}
+{% block page_title %}{{ t('edit_user') }}{% endblock %}
 
 {% block content %}
     <!-- Messages flash -->
@@ -23,38 +23,38 @@
                 <div class="card-body">
                     <h3 class="mb-4">
                         <i class="bi bi-pencil me-2"></i>
-                        Modifier l'utilisateur: {{ user.username }}
+                        {{ t('edit_user') }}: {{ user.username }}
                     </h3>
                     
                     <form method="POST" action="">
                         <div class="mb-3">
-                            <label for="username" class="form-label">Nom d'utilisateur</label>
+                            <label for="username" class="form-label">{{ t('username') }}</label>
                             <input type="text" class="form-control" id="username" name="username" 
                                    value="{{ user.username }}" required autofocus>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="password" class="form-label">Nouveau mot de passe (optionnel)</label>
+                            <label for="password" class="form-label">{{ t('new_password') }} {{ t('optional') }}</label>
                             <input type="password" class="form-control" id="password" name="password" 
-                                   placeholder="Laisser vide pour ne pas changer">
-                            <div class="form-text">Laisser vide pour garder le mot de passe actuel</div>
+                                   placeholder="{{ t('leave_empty') }}">
+                            <div class="form-text">{{ t('leave_empty_keep') }}</div>
                         </div>
                         
                         <div class="mb-4">
-                            <label for="role" class="form-label">Rôle</label>
+                            <label for="role" class="form-label">{{ t('role') }}</label>
                             <select class="form-select" id="role" name="role">
-                                <option value="user" {% if user.role == 'user' %}selected{% endif %}>Utilisateur</option>
-                                <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrateur</option>
+                                <option value="user" {% if user.role == 'user' %}selected{% endif %}>{{ t('user') }}</option>
+                                <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>{{ t('admin') }}</option>
                             </select>
-                            <div class="form-text">Les administrateurs peuvent gérer les utilisateurs</div>
+                            <div class="form-text">{{ t('admin_description') }}</div>
                         </div>
                         
                         <div class="d-flex gap-2">
                             <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left me-1"></i> Retour
+                                <i class="bi bi-arrow-left me-1"></i> {{ t('back')|default('Back') }}
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Sauvegarder
+                                <i class="bi bi-check-lg me-1"></i> {{ t('save') }}
                             </button>
                         </div>
                     </form>

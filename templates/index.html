@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Documents - DocManager{% endblock %}
+{% block title %}{{ t('documents') }} - {{ t('doc_manager') }}{% endblock %}
 
-{% block page_title %}Mes Documents{% endblock %}
+{% block page_title %}{{ t('my_documents') }}{% endblock %}
 
 {% block content %}
     <!-- Messages flash -->
@@ -21,13 +21,13 @@
     <div class="search-section">
         <h3 class="mb-3">
             <i class="bi bi-search me-2"></i>
-            Rechercher des documents
+            {{ t('search') }} {{ t('documents') }}
         </h3>
         <form method="GET" action="{{ url_for('index') }}" class="row g-3">
             <div class="col-md-2">
-                <label for="doc_type" class="form-label">Type de document</label>
-                <select class="form-select" id="doc_type" name="doc_type">
-                    <option value="">Tous les types</option>
+                <label for="search_doc_type" class="form-label">{{ t('doc_type') }}</label>
+                <select class="form-select" id="search_doc_type" name="doc_type">
+                    <option value="">{{ t('all_types') }}</option>
                     {% for type_id, type_config in document_types.items() %}
                         <option value="{{ type_id }}" {% if search_type == type_id %}selected{% endif %}>
                             {{ type_config.name }}
@@ -36,27 +36,27 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="author" class="form-label">Auteur</label>
+                <label for="author" class="form-label">{{ t('author') }}</label>
                 <input type="text" class="form-control" id="author" name="author" 
-                       value="{{ search_author }}" placeholder="Nom de l'auteur...">
+                       value="{{ search_author }}" placeholder="{{ t('search_author') }}...">
             </div>
             <div class="col-md-2">
-                <label for="upload_from" class="form-label">Upload à partir de</label>
+                <label for="upload_from" class="form-label">{{ t('search_upload_from') }}</label>
                 <input type="date" class="form-control" id="upload_from" name="upload_from" 
                        value="{{ search_upload_from }}">
             </div>
             <div class="col-md-2">
-                <label for="upload_to" class="form-label">Upload jusqu'à</label>
+                <label for="upload_to" class="form-label">{{ t('search_upload_to') }}</label>
                 <input type="date" class="form-control" id="upload_to" name="upload_to" 
                        value="{{ search_upload_to }}">
             </div>
             <div class="col-md-2">
-                <label for="validity_from" class="form-label">Validité à partir de</label>
+                <label for="validity_from" class="form-label">{{ t('search_validity_from') }}</label>
                 <input type="date" class="form-control" id="validity_from" name="validity_from" 
                        value="{{ search_validity_from }}">
             </div>
             <div class="col-md-2">
-                <label for="validity_to" class="form-label">Validité jusqu'à</label>
+                <label for="validity_to" class="form-label">{{ t('search_validity_to') }}</label>
                 <input type="date" class="form-control" id="validity_to" name="validity_to" 
                        value="{{ search_validity_to }}">
             </div>
@@ -67,7 +67,7 @@
             </div>
             <div class="col-12">
                 <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Réinitialiser
+                    <i class="bi bi-arrow-clockwise me-1"></i> {{ t('reset') }}
                 </a>
             </div>
         </form>
@@ -76,7 +76,7 @@
     <!-- Bouton Ajouter Document -->
     <div class="d-flex justify-content-end mb-3">
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDocumentModal">
-            <i class="bi bi-plus-lg me-1"></i> Ajouter un document
+            <i class="bi bi-plus-lg me-1"></i> {{ t('add_document') }}
         </button>
     </div>
     
@@ -86,11 +86,11 @@
             <div class="col-12">
                 <div class="empty-state">
                     <i class="bi bi-file-earmark-x"></i>
-                    <h3>Aucun document trouvé</h3>
+                    <h3>{{ t('no_documents') }}</h3>
                     <p class="text-muted mt-2">
-                        Essayez de modifier vos critères de recherche ou 
+                        {{ t('try_search') }} 
                         <a href="#" data-bs-toggle="modal" data-bs-target="#addDocumentModal" class="text-primary">
-                            ajoutez un document
+                            {{ t('add_first_document') }}
                         </a>
                     </p>
                 </div>
@@ -118,18 +118,18 @@
                                     <span class="user-avatar me-2">
                                         {{ doc.username[:1].upper() }}
                                     </span>
-                                    <span><strong>Auteur:</strong> {{ doc.username }}</span>
+                                    <span><strong>{{ t('author') }}:</strong> {{ doc.username }}</span>
                                 </div>
                                 <div>
-                                    <strong>Upload:</strong> 
-                                    {{ doc.upload_date[:10] if doc.upload_date else 'N/A' }}
+                                    <strong>{{ t('upload_date') }}:</strong> 
+                                    {{ doc.upload_date[:10] if doc.upload_date else t('n_a') }}
                                 </div>
                                 {% if doc.validity_date %}
                                     <div class="mt-1">
-                                        <strong>Valide jusqu'au:</strong> 
+                                        <strong>{{ t('valid_until') }}</strong> 
                                         {{ doc.validity_date }}
                                         {% if doc.validity_date < current_date %}
-                                            <span class="badge bg-danger ms-2">Expiré</span>
+                                            <span class="badge bg-danger ms-2">{{ t('expired') }}</span>
                                         {% endif %}
                                     </div>
                                 {% endif %}
@@ -137,7 +137,7 @@
                                 <!-- Afficher les attributs spécifiques au type -->
                                 {% if doc.type and doc.attributes %}
                                     <div class="mt-2 document-attributes">
-                                        <strong>Détails:</strong>
+                                        <strong>{{ t('details') }}</strong>
                                         {% for attr_name, attr_value in doc.attributes.items() %}
                                             <div class="ms-3">
                                                 <small>
@@ -166,14 +166,14 @@
                                     <a href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" 
                                        target="_blank" 
                                        class="btn btn-outline-primary btn-sm action-btn">
-                                        <i class="bi bi-box-arrow-up-right me-1"></i> Ouvrir PDF
+                                        <i class="bi bi-box-arrow-up-right me-1"></i> {{ t('open_pdf') }}
                                     </a>
                                 {% endif %}
                                 {% if current_user.id == doc.user_id or current_user.role == 'admin' %}
                                     <a href="{{ url_for('delete_document', doc_id=doc.id) }}" 
                                        class="btn btn-outline-danger btn-sm action-btn"
-                                       onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce document ?')">
-                                        <i class="bi bi-trash me-1"></i> Supprimer
+                                       onclick="return confirm('{{ t('are_you_sure') }}')">
+                                        <i class="bi bi-trash me-1"></i> {{ t('delete') }}
                                     </a>
                                 {% endif %}
                             </div>
@@ -191,7 +191,7 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="addDocumentModalLabel">
                         <i class="bi bi-file-earmark-plus me-2"></i>
-                        Ajouter un document
+                        {{ t('add_document') }}
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -199,25 +199,25 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="title" class="form-label">
-                                Titre <span class="text-danger">*</span>
+                                {{ t('title') }} <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control" id="title" name="title" 
                                    value="{{ request.form.title if request.method == 'POST' else '' }}" 
-                                   placeholder="Titre du document..." required>
+                                   placeholder="{{ t('title') }}..." required>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="content" class="form-label">Contenu (optionnel)</label>
+                            <label for="content" class="form-label">{{ t('content') }} {{ t('optional') }}</label>
                             <textarea class="form-control" id="content" name="content" 
                                       rows="3" 
-                                      placeholder="Description ou contenu du document...">
+                                      placeholder="{{ t('content') }}...">
 {{ request.form.content if request.method == 'POST' else '' }}</textarea>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="doc_type" class="form-label">Type de document</label>
-                            <select class="form-select" id="doc_type" name="doc_type" required onchange="toggleDocumentTypeFields()">
-                                <option value="">-- Sélectionnez un type --</option>
+                            <label for="doc_type" class="form-label">{{ t('doc_type') }}</label>
+                            <select class="form-select" id="doc_type" name="doc_type" required>
+                                <option value="">{{ t('select_type') }}</option>
                                 {% for type_id, type_config in document_types.items() %}
                                     <option value="{{ type_id }}" {% if request.form.doc_type == type_id %}selected{% endif %}>
                                         {{ type_config.name }} - {{ type_config.description }}
@@ -227,7 +227,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="validity_date" class="form-label">Date de validité</label>
+                            <label for="validity_date" class="form-label">{{ t('validity_date') }}</label>
                             <input type="date" class="form-control" id="validity_date" name="validity_date" 
                                    value="{{ request.form.validity_date if request.method == 'POST' else '' }}">
                         </div>
@@ -270,10 +270,10 @@
                         
                         <div class="mb-3">
                             <label for="file" class="form-label">
-                                Fichier PDF <span class="text-danger">*</span>
+                                {{ t('file_pdf') }} <span class="text-danger">*</span>
                             </label>
                             <input type="file" class="form-control" id="file" name="file" accept=".pdf" required>
-                            <div class="form-text">Seuls les fichiers PDF sont acceptés (max 16 Mo)</div>
+                            <div class="form-text">{{ t('pdf_only') }}</div>
                         </div>
                         
                         <!-- Auteur caché (automatiquement l'utilisateur connecté) -->
@@ -281,10 +281,10 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            Annuler
+                            {{ t('cancel') }}
                         </button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i> Ajouter
+                            <i class="bi bi-check-lg me-1"></i> {{ t('add') }}
                         </button>
                     </div>
                 </form>
@@ -316,9 +316,15 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             const docTypeSelect = document.getElementById('doc_type');
-            // Trigger change event to show fields for pre-selected type
-            if (docTypeSelect.value) {
-                toggleDocumentTypeFields();
+            
+            // Ajouter event listener pour le changement de type
+            if (docTypeSelect) {
+                docTypeSelect.addEventListener('change', toggleDocumentTypeFields);
+                
+                // Afficher les champs pour le type pré-sélectionné
+                if (docTypeSelect.value) {
+                    toggleDocumentTypeFields();
+                }
             }
         });
     </script>

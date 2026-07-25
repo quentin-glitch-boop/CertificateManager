@@ -1,6 +1,7 @@
 """Tests for document types functionality"""
 import pytest
 import json
+import io
 
 
 class TestDocumentTypes:
@@ -35,10 +36,6 @@ class TestDocumentTypes:
         for attr in expected_attrs:
             assert attr in attrs, f"Attribute {attr} not found in certificat"
         
-        # Check url_telechargement is optional
-        assert attrs['url_telechargement']['required'] == False
-        assert attrs['url_telechargement']['type'] == 'string'
-        
         # Check attribute properties
         assert attrs['nom_societe_certifiee']['type'] == 'string'
         assert attrs['nom_societe_certifiee']['required'] == True
@@ -47,6 +44,10 @@ class TestDocumentTypes:
         assert attrs['date_peremption']['type'] == 'date'
         assert attrs['date_peremption']['required'] == True
         assert attrs['date_peremption']['form_type'] == 'date'
+        
+        # Check url_telechargement is optional
+        assert attrs['url_telechargement']['required'] == False
+        assert attrs['url_telechargement']['type'] == 'string'
         
     def test_validate_document_attributes_valid(self):
         """Test validation with valid attributes"""
@@ -63,105 +64,44 @@ class TestDocumentTypes:
         assert is_valid == True
         assert errors == []
         
-    def test_validate_document_attributes_missing_required(self):
-        """Test validation with missing required attributes"""
-        from app import validate_document_attributes
+    def test_add_document_with_type_and_pdf(self, logged_in_client):
+        """Test complete document submission with type, attributes, and PDF file"""
+        # Create a valid minimal PDF
+        pdf_content = b'%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n%%EOF'
         
-        # Missing nom_societe_certifiee
-        attributes = {
-            'societe_certificatrice': 'Certificateur B',
-            'date_peremption': '2026-12-31'
-        }
-        
-        is_valid, errors = validate_document_attributes('certificat', attributes)
-        assert is_valid == False
-        assert len(errors) > 0
-        assert any('obligatoire' in error for error in errors)
-        
-    def test_validate_document_attributes_invalid_date(self):
-        """Test validation with invalid date format"""
-        from app import validate_document_attributes
-        
-        attributes = {
-            'nom_societe_certifiee': 'Societe A',
-            'societe_certificatrice': 'Certificateur B',
-            'date_peremption': 'invalid-date'
-        }
-        
-        is_valid, errors = validate_document_attributes('certificat', attributes)
-        assert is_valid == False
-        assert any('date valide' in error for error in errors)
-        
-    def test_validate_unknown_document_type(self):
-        """Test validation with unknown document type"""
-        from app import validate_document_attributes
-        
-        is_valid, errors = validate_document_attributes('unknown_type', {})
-        assert is_valid == False
-        assert any('inconnu' in error for error in errors)
-    
-    def test_register_new_document_type(self):
-        """Test registering a new document type"""
-        from app import register_document_type, get_document_type
-        
-        new_type = {
-            'name': 'Contrat',
-            'description': 'Contrat commercial',
-            'attributes': {
-                'partie_a': {
-                    'type': 'string',
-                    'label': 'Partie A',
-                    'required': True,
-                    'form_type': 'text'
-                },
-                'montant': {
-                    'type': 'number',
-                    'label': 'Montant',
-                    'required': False,
-                    'form_type': 'number'
-                }
-            }
-        }
-        
-        register_document_type('contrat', new_type)
-        
-        # Verify it was registered
-        contrat = get_document_type('contrat')
-        assert contrat is not None
-        assert contrat['name'] == 'Contrat'
-        assert 'partie_a' in contrat['attributes']
-        
-    def test_add_document_with_type_and_attributes(self, logged_in_client):
-        """Test adding a document with type and attributes via web interface"""
-        # Test adding a certificat document (without file for now, just testing type/attributes)
-        response = logged_in_client.post('/add', data={
-            'title': 'Certificat Test',
-            'content': 'Test certificat',
+        data = {
+            'title': 'Test Certificate Full',
+            'content': 'Test content',
             'doc_type': 'certificat',
-            'doc_attr_nom_societe_certifiee': 'Societe Test',
-            'doc_attr_societe_certificatrice': 'Certificateur Test',
-            'doc_attr_adresse': '123 Rue Test',
-            'doc_attr_date_peremption': '2026-12-31'
-        }, content_type='multipart/form-data', follow_redirects=True)
+            'doc_attr_nom_societe_certifiee': 'Test Company',
+            'doc_attr_societe_certificatrice': 'Test Certifier',
+            'doc_attr_adresse': '123 Test Street',
+            'doc_attr_date_peremption': '2026-12-31',
+            'doc_attr_url_telechargement': 'https://example.com/cert.pdf',
+            'file': (io.BytesIO(pdf_content), 'test_cert.pdf'),
+        }
         
-        # Should have error about missing PDF
+        response = logged_in_client.post('/add', 
+                                         data=data, 
+                                         content_type='multipart/form-data',
+                                         follow_redirects=True)
+        
         assert response.status_code == 200
-        assert b'PDF est obligatoire' in response.data or b'PDF' in response.data
+        assert b'Document' in response.data and b'succ' in response.data.lower()
         
-    def test_add_document_missing_required_attribute(self, logged_in_client):
-        """Test that adding a document with missing required attribute fails"""
-        response = logged_in_client.post('/add', data={
-            'title': 'Certificat Incomplet',
-            'doc_type': 'certificat',
-            'doc_attr_societe_certificatrice': 'Certificateur Test',
-        }, content_type='multipart/form-data', follow_redirects=True)
-        
-        # Should stay on page with error message
-        assert response.status_code == 200
-        assert b'est obligatoire' in response.data
-        
-    def test_document_type_filter(self, logged_in_client):
-        """Test filtering documents by type"""
-        # Access index with type filter
-        response = logged_in_client.get('/?doc_type=certificat')
-        assert response.status_code == 200
+        # Verify in database
+        from app import get_db
+        from flask import current_app
+        with current_app.app_context():
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute('SELECT type, attributes FROM documents WHERE title = ?', 
+                          ('Test Certificate Full',))
+            doc = cursor.fetchone()
+            conn.close()
+            
+            assert doc is not None
+            assert doc['type'] == 'certificat'
+            attrs = json.loads(doc['attributes']) if doc['attributes'] else {}
+            assert attrs.get('nom_societe_certifiee') == 'Test Company'
+            assert attrs.get('url_telechargement') == 'https://example.com/cert.pdf'

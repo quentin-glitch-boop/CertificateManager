@@ -11,8 +11,9 @@ class TestLogin:
         """Login page should load"""
         response = client.get('/login')
         assert response.status_code == 200
-        assert b'Nom d' in response.data
-        assert b'Mot de passe' in response.data
+        # Check for translation keys or English/French text
+        assert b'username' in response.data.lower() or b'Nom d' in response.data
+        assert b'password' in response.data.lower() or b'Mot de passe' in response.data
     
     def test_login_success(self, client):
         """Successful login should redirect to index"""

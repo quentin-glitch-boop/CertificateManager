@@ -10,6 +10,9 @@ documents.db
 static/uploads/*
 !static/uploads/.gitkeep
 
+# Initial DB certificates (large files)
+certificats_init_db/
+
 # IDE
 .idea/
 .vscode/
@@ -27,6 +30,9 @@ htmlcov/
 .env
 .venv/
 env/
+
+# GitHub credentials
+github_credentials_for_vibe.txt
 
 # Logs
 *.log

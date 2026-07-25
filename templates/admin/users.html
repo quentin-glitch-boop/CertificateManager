@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Gestion Utilisateurs - DocManager{% endblock %}
+{% block title %}{{ t('user_management') }} - {{ t('doc_manager') }}{% endblock %}
 
-{% block page_title %}Gestion des Utilisateurs{% endblock %}
+{% block page_title %}{{ t('user_management') }}{% endblock %}
 
 {% block content %}
     <!-- Messages flash -->
@@ -20,10 +20,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="m-0">
             <i class="bi bi-people me-2"></i>
-            Liste des utilisateurs
+            {{ t('users') }}
         </h2>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-            <i class="bi bi-plus-lg me-1"></i> Ajouter un utilisateur
+            <i class="bi bi-plus-lg me-1"></i> {{ t('add_user') }}
         </button>
     </div>
     
@@ -33,11 +33,11 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Nom d'utilisateur</th>
-                            <th>Rôle</th>
-                            <th>Date de création</th>
-                            <th>Actions</th>
+                            <th>{{ t('id') }}</th>
+                            <th>{{ t('username') }}</th>
+                            <th>{{ t('role') }}</th>
+                            <th>{{ t('created_at') }}</th>
+                            <th>{{ t('actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -55,20 +55,20 @@
                                         {{ user.role.upper() }}
                                     </span>
                                 </td>
-                                <td>{{ user.created_at if user.created_at else 'N/A' }}</td>
+                                <td>{{ user.created_at if user.created_at else t('n_a') }}</td>
                                 <td>
                                     {% if current_user.id != user.id %}
                                         <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" 
                                            class="btn btn-sm btn-outline-primary me-2">
-                                            <i class="bi bi-pencil me-1"></i> Modifier
+                                            <i class="bi bi-pencil me-1"></i> {{ t('edit') }}
                                         </a>
                                         <a href="{{ url_for('admin_delete_user', user_id=user.id) }}" 
                                            class="btn btn-sm btn-outline-danger"
-                                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')">
-                                            <i class="bi bi-trash me-1"></i> Supprimer
+                                           onclick="return confirm('{{ t('are_you_sure') }}')">
+                                            <i class="bi bi-trash me-1"></i> {{ t('delete') }}
                                         </a>
                                     {% else %}
-                                        <span class="text-muted small">(Vous)</span>
+                                        <span class="text-muted small">({{ t('you')|default('Vous') }})</span>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -86,7 +86,7 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="addUserModalLabel">
                         <i class="bi bi-person-plus me-2"></i>
-                        Ajouter un utilisateur
+                        {{ t('add_user') }}
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -94,36 +94,36 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="username" class="form-label">
-                                Nom d'utilisateur <span class="text-danger">*</span>
+                                {{ t('username') }} <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control" id="username" name="username" 
-                                   placeholder="Nom de l'utilisateur..." required autofocus>
+                                   placeholder="{{ t('enter_username') }}..." required autofocus>
                         </div>
                         
                         <div class="mb-3">
                             <label for="password" class="form-label">
-                                Mot de passe <span class="text-danger">*</span>
+                                {{ t('password') }} <span class="text-danger">*</span>
                             </label>
                             <input type="password" class="form-control" id="password" name="password" 
-                                   placeholder="Mot de passe..." required>
-                            <div class="form-text">Le mot de passe doit contenir au moins 6 caractères</div>
+                                   placeholder="{{ t('enter_password') }}..." required>
+                            <div class="form-text">{{ t('password_min_length')|default('Password must be at least 6 characters') }}</div>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="role" class="form-label">Rôle</label>
+                            <label for="role" class="form-label">{{ t('role') }}</label>
                             <select class="form-select" id="role" name="role">
-                                <option value="user" selected>Utilisateur</option>
-                                <option value="admin">Administrateur</option>
+                                <option value="user" selected>{{ t('user') }}</option>
+                                <option value="admin">{{ t('admin') }}</option>
                             </select>
-                            <div class="form-text">Les administrateurs peuvent gérer les utilisateurs</div>
+                            <div class="form-text">{{ t('admin_description')|default('Admins can manage users') }}</div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            Annuler
+                            {{ t('cancel') }}
                         </button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i> Ajouter
+                            <i class="bi bi-check-lg me-1"></i> {{ t('add') }}
                         </button>
                     </div>
                 </form>
@@ -138,7 +138,7 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="editUserModalLabel">
                         <i class="bi bi-pencil me-2"></i>
-                        Modifier l'utilisateur
+                        {{ t('edit_user') }}
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -146,32 +146,32 @@
                     <input type="hidden" name="user_id" id="edit_user_id">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="edit_username" class="form-label">Nom d'utilisateur</label>
+                            <label for="edit_username" class="form-label">{{ t('username') }}</label>
                             <input type="text" class="form-control" id="edit_username" name="username" 
-                                   placeholder="Nom de l'utilisateur..." required>
+                                   placeholder="{{ t('enter_username') }}..." required>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="edit_password" class="form-label">Nouveau mot de passe (optionnel)</label>
+                            <label for="edit_password" class="form-label">{{ t('new_password')|default('New password') }} {{ t('optional') }}</label>
                             <input type="password" class="form-control" id="edit_password" name="password" 
-                                   placeholder="Laisser vide pour ne pas changer">
-                            <div class="form-text">Laisser vide pour garder le mot de passe actuel</div>
+                                   placeholder="{{ t('leave_empty')|default('Leave empty to keep current') }}">
+                            <div class="form-text">{{ t('leave_empty_keep')|default('Leave empty to keep current password') }}</div>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="edit_role" class="form-label">Rôle</label>
+                            <label for="edit_role" class="form-label">{{ t('role') }}</label>
                             <select class="form-select" id="edit_role" name="role">
-                                <option value="user">Utilisateur</option>
-                                <option value="admin">Administrateur</option>
+                                <option value="user">{{ t('user') }}</option>
+                                <option value="admin">{{ t('admin') }}</option>
                             </select>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            Annuler
+                            {{ t('cancel') }}
                         </button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i> Sauvegarder
+                            <i class="bi bi-check-lg me-1"></i> {{ t('save') }}
                         </button>
                     </div>
                 </form>

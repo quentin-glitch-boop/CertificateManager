@@ -1,6 +1,6 @@
 {% extends "base_nonauth.html" %}
 
-{% block title %}Connexion - DocManager{% endblock %}
+{% block title %}{{ t('login') }} - {{ t('doc_manager') }}{% endblock %}
 
 {% block content %}
 <div class="login-container">
@@ -9,7 +9,7 @@
             <div class="login-logo">
                 <i class="bi bi-file-earmark-pdf-fill"></i>
             </div>
-            <h3 class="login-title">DocManager</h3>
+            <h3 class="login-title">{{ t('doc_manager') }}</h3>
             
             <!-- Messages flash -->
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -25,27 +25,27 @@
             
             <form method="POST" action="{{ url_for('login') }}">
                 <div class="mb-3">
-                    <label for="username" class="form-label">Nom d'utilisateur</label>
+                    <label for="username" class="form-label">{{ t('username') }}</label>
                     <input type="text" class="form-control form-control-lg" id="username" name="username" 
-                           placeholder="Entrez votre nom d'utilisateur" required autofocus>
+                           placeholder="{{ t('enter_username') }}" required autofocus>
                 </div>
                 
                 <div class="mb-3">
-                    <label for="password" class="form-label">Mot de passe</label>
+                    <label for="password" class="form-label">{{ t('password') }}</label>
                     <input type="password" class="form-control form-control-lg" id="password" name="password" 
-                           placeholder="Entrez votre mot de passe" required>
+                           placeholder="{{ t('enter_password') }}" required>
                 </div>
                 
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-box-arrow-in-right me-2"></i> Se connecter
+                        <i class="bi bi-box-arrow-in-right me-2"></i> {{ t('login') }}
                     </button>
                 </div>
             </form>
             
             <div class="mt-4 text-center">
                 <p class="text-muted mb-0">
-                    <small>© 2026 DocManager. Tous droits réservés.</small>
+                    <small>© 2026 {{ t('doc_manager') }}. {{ t('all_rights_reserved') }}</small>
                 </p>
             </div>
         </div>

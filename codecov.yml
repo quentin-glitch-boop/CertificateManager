@@ -1,0 +1,23 @@
+version: 2
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 0%
+    patch:
+      default:
+        target: auto
+        threshold: 0%
+  notify:
+    require_ci_to_pass: false
+
+ignore:
+  - "tests/*"
+  - "venv/*"
+  - ".venv/*"
+  - "migrations/*"
+
+github_checks:
+  annotations: true

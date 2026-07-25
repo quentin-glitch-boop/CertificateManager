@@ -20,15 +20,15 @@ from werkzeug.security import generate_password_hash
 def app(tmp_path):
     """Flask application in test mode"""
     import os
-    
+
     # Create a temporary database file in pytest's tmp_path
-    db_path = tmp_path / 'test_documents.db'
-    
-    _app.config['TESTING'] = True
-    _app.config['DATABASE'] = str(db_path)
-    _app.config['WTF_CSRF_ENABLED'] = False
-    _app.config['SECRET_KEY'] = 'test_secret_key_for_testing_only'
-    
+    db_path = tmp_path / "test_documents.db"
+
+    _app.config["TESTING"] = True
+    _app.config["DATABASE"] = str(db_path)
+    _app.config["WTF_CSRF_ENABLED"] = False
+    _app.config["SECRET_KEY"] = "test_secret_key_for_testing_only"
+
     return _app
 
 
@@ -39,9 +39,9 @@ def client(app):
         # Initialize database - this will create tables in the in-memory database
         conn = get_db()
         cursor = conn.cursor()
-        
+
         # Create tables
-        cursor.execute('''
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE,
@@ -49,9 +49,9 @@ def client(app):
                 role TEXT NOT NULL DEFAULT 'user',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        ''')
-        
-        cursor.execute('''
+        """)
+
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS documents (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
@@ -64,36 +64,53 @@ def client(app):
                 attributes TEXT,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
-        ''')
+        """)
         conn.commit()
-        
+
         # Clear existing data
-        cursor.execute('DELETE FROM documents')
-        cursor.execute('DELETE FROM users')
-        
+        cursor.execute("DELETE FROM documents")
+        cursor.execute("DELETE FROM users")
+
         # Add test users
-        user_password = generate_password_hash('testpass123')
-        cursor.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', 
-                      ('testuser', user_password, 'user'))
+        user_password = generate_password_hash("testpass123")
+        cursor.execute(
+            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+            ("testuser", user_password, "user"),
+        )
         user1_id = cursor.lastrowid
-        
-        admin_password = generate_password_hash('adminpass123')
-        cursor.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', 
-                      ('testadmin', admin_password, 'admin'))
+
+        admin_password = generate_password_hash("adminpass123")
+        cursor.execute(
+            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+            ("testadmin", admin_password, "admin"),
+        )
         user2_id = cursor.lastrowid
-        
-        cursor.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', 
-                      ('user2', generate_password_hash('password123'), 'user'))
-        
+
+        cursor.execute(
+            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+            ("user2", generate_password_hash("password123"), "user"),
+        )
+
         # Add test document
-        cursor.execute('''
+        cursor.execute(
+            """
             INSERT INTO documents (title, content, user_id, validity_date, file_path, type, attributes)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', ('Test Document', 'Contenu de test', user1_id, '2026-12-31', None, 'certificat', None))
-        
+        """,
+            (
+                "Test Document",
+                "Contenu de test",
+                user1_id,
+                "2026-12-31",
+                None,
+                "certificat",
+                None,
+            ),
+        )
+
         conn.commit()
         conn.close()
-    
+
     with app.test_client() as client:
         yield client
     # pytest's tmp_path fixture handles cleanup automatically
@@ -103,42 +120,45 @@ def client(app):
 def logged_in_client(client):
     """Client logged in as testuser via actual login"""
     # Perform actual login
-    client.post('/login', data={
-        'username': 'testuser',
-        'password': 'testpass123'
-    }, follow_redirects=True)
-    
+    client.post(
+        "/login",
+        data={"username": "testuser", "password": "testpass123"},
+        follow_redirects=True,
+    )
+
     yield client
-    
+
     # Logout
-    client.get('/logout', follow_redirects=True)
+    client.get("/logout", follow_redirects=True)
 
 
 @pytest.fixture
 def admin_client(client):
     """Client logged in as admin via actual login"""
     # Perform actual login as admin
-    client.post('/login', data={
-        'username': 'testadmin',
-        'password': 'adminpass123'
-    }, follow_redirects=True)
-    
+    client.post(
+        "/login",
+        data={"username": "testadmin", "password": "adminpass123"},
+        follow_redirects=True,
+    )
+
     yield client
-    
+
     # Logout
-    client.get('/logout', follow_redirects=True)
+    client.get("/logout", follow_redirects=True)
 
 
 @pytest.fixture
 def test_db():
     """Temporary database for unit tests"""
     import tempfile
+
     db_fd, db_path = tempfile.mkstemp()
-    
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
-    cursor.execute('''
+
+    cursor.execute("""
         CREATE TABLE users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
@@ -146,9 +166,9 @@ def test_db():
             role TEXT NOT NULL DEFAULT 'user',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    ''')
-    
-    cursor.execute('''
+    """)
+
+    cursor.execute("""
         CREATE TABLE documents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
@@ -161,11 +181,11 @@ def test_db():
             attributes TEXT,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
-    ''')
-    
+    """)
+
     conn.commit()
-    
+
     yield conn
-    
+
     conn.close()
     os.unlink(db_path)

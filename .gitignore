@@ -24,6 +24,7 @@ Thumbs.db
 # Test
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
 
 # Virtual env

@@ -53,8 +53,11 @@ def test_routes_are_registered():
 
 def test_upload_folder_exists():
     """Test that the upload folder exists"""
-    from app import app
+    from app import app, ensure_upload_folder
     import os
+    
+    # Ensure upload folder exists (create if needed)
+    ensure_upload_folder()
     
     upload_folder = app.config['UPLOAD_FOLDER']
     assert os.path.exists(upload_folder)

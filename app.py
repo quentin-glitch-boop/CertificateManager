@@ -1623,6 +1623,9 @@ def api_create_document():
     validity_date = data.get('validity_date')
     file_base64 = data.get('file')
     
+    # Assurer que le dossier d'upload existe
+    ensure_upload_folder()
+    
     # Gestion du fichier PDF (base64)
     file_path = None
     if file_base64:

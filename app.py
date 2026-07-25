@@ -28,9 +28,6 @@ def ensure_upload_folder():
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limite à 16 Mo
 
-# Créer le dossier d'upload au démarrage (si possible)
-ensure_upload_folder()
-
 # Contexte global pour les templates
 @app.context_processor
 def inject_global_vars():
@@ -1062,6 +1059,9 @@ def add_document():
                 if not app.config.get('TESTING', False) and file.content_type != 'application/pdf':
                     flash('Le fichier doit être un PDF valide', 'error')
                     return redirect(url_for('index'))
+                
+                # Assurer que le dossier d'upload existe
+                ensure_upload_folder()
                 
                 # Sauvegarder le fichier
                 try:

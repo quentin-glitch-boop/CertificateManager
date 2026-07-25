@@ -505,8 +505,14 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- jQuery (required for GridStack) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- jQuery UI (for draggable/droppable) -->
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <!-- GridStack JS -->
 <script src="https://cdn.jsdelivr.net/npm/gridstack@7.2.3/dist/gridstack-all.js"></script>
+<!-- GridStack jQuery plugin -->
+<script src="https://cdn.jsdelivr.net/npm/gridstack@7.2.3/dist/gridstack-jquery-ui.js"></script>
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <!-- Chart.js -->
@@ -625,24 +631,34 @@
     function initDashboard() {
         showLoading();
         
-        // Initialiser GridStack
-        grid = GridStack.init({
-            float: false,
-            cellHeight: '70px',
-            minRow: 1,
-            margin: 10,
-            acceptWidgets: true,
-            removable: true,
-            removeTimeout: 100,
-            oneColumnMode: 'mobile',
-            staticGrid: false
-        });
-        
-        // Charger la configuration
+        // Charger la configuration d'abord
         loadDashboardConfig();
         
-        // Charger les données des widgets
-        loadAllWidgetsData();
+        // Initialiser GridStack APRES avoir ajouté les widgets au DOM
+        setTimeout(() => {
+            try {
+                grid = GridStack.init({
+                    float: false,
+                    cellHeight: '70px',
+                    minRow: 1,
+                    margin: 10,
+                    acceptWidgets: true,
+                    removable: true,
+                    removeTimeout: 100,
+                    oneColumnMode: 'mobile',
+                    staticGrid: !isEditMode
+                });
+                
+                // Charger les données des widgets
+                loadAllWidgetsData();
+                hideLoading();
+            } catch (error) {
+                console.error('Erreur GridStack:', error);
+                // Essayez de charger les données quand même
+                loadAllWidgetsData();
+                hideLoading();
+            }
+        }, 50);
     }
     
     function loadDashboardConfig() {
@@ -651,8 +667,9 @@
     }
     
     function renderDashboard(config) {
-        // Effacer le grid
         const gridElement = document.getElementById('dashboardGrid');
+        
+        // Effacer le grid
         gridElement.innerHTML = '';
         
         // Ajouter chaque widget au grid
@@ -660,7 +677,7 @@
             addWidgetToGrid(widget);
         });
         
-        hideLoading();
+        // Ne pas cacher le loading ici, ça sera fait dans initDashboard
     }
     
     function addWidgetToGrid(widgetConfig) {
@@ -678,9 +695,24 @@
         gridItem.setAttribute('gs-y', widgetConfig.y || 0);
         gridItem.setAttribute('data-widget-id', widgetConfig.widget_id);
         gridItem.setAttribute('gs-auto-position', 'false');
-        gridItem.setAttribute('gs-no-move', isEditMode ? 'false' : 'true');
-        gridItem.setAttribute('gs-no-resize', isEditMode ? 'false' : 'true');
-        gridItem.setAttribute('gs-locked', isEditMode ? 'false' : 'true');
+        
+        // Définir les attributs de contrôle
+        const noMove = isEditMode ? 'false' : 'true';
+        const noResize = isEditMode ? 'false' : 'true';
+        const locked = isEditMode ? 'false' : 'true';
+        
+        gridItem.setAttribute('gs-no-move', noMove);
+        gridItem.setAttribute('gs-no-resize', noResize);
+        gridItem.setAttribute('gs-locked', locked);
+        
+        // Ajouter un style de positionnement de secours (si GridStack ne fonctionne pas)
+        const width = (widgetConfig.w || widgetInfo.default_size.w) * 100 + 20;
+        const height = (widgetConfig.h || widgetInfo.default_size.h) * 70 + 40;
+        const left = (widgetConfig.x || 0) * 100 + 20;
+        const top = (widgetConfig.y || 0) * 70 + 20;
+        
+        gridItem.style.minWidth = width + 'px';
+        gridItem.style.minHeight = height + 'px';
         
         gridItem.innerHTML = `
             <div class="grid-stack-item-content">
@@ -725,7 +757,9 @@
             .then(response => response.json())
             .then(data => {
                 widgetsData[widgetId] = data;
-                renderWidget(widgetId, data);
+                // Extraire les paramètres
+                const params = data.params || {};
+                renderWidget(widgetId, data.data || data, params);
             })
             .catch(error => {
                 console.error('Erreur lors du chargement des données du widget:', error);
@@ -733,7 +767,7 @@
             });
     }
     
-    function renderWidget(widgetId, data) {
+    function renderWidget(widgetId, data, params = {}) {
         const widgetContainer = document.getElementById(`widget-${widgetId}`);
         if (!widgetContainer) return;
         
@@ -745,7 +779,7 @@
                 renderTimelineWidget(widgetContainer, data);
                 break;
             case 'map':
-                renderMapWidget(widgetContainer, data);
+                renderMapWidget(widgetContainer, data, params);
                 break;
             case 'stats':
                 renderStatsWidget(widgetContainer, data);
@@ -844,14 +878,35 @@
         });
     }
     
-    function renderMapWidget(container, data) {
+    function renderMapWidget(container, data, params = {}) {
         container.innerHTML = '';
         
         const mapContainer = document.createElement('div');
         mapContainer.className = 'map-container';
         container.appendChild(mapContainer);
         
-        const map = L.map(mapContainer).setView([47.0, 2.0], 6);
+        // Récupérer le centre et zoom depuis les paramètres
+        let center = [47.0, 2.0];
+        let zoom = 6;
+        
+        if (params.default_center) {
+            // Gérer le cas où default_center est une liste ou une chaîne
+            if (Array.isArray(params.default_center)) {
+                center = params.default_center;
+            } else if (typeof params.default_center === 'string') {
+                // Essayer de parser "lat,lon" ou "[lat,lon]"
+                const parsed = params.default_center.replace(/[\\[\\]]/g, '').split(',').map(parseFloat);
+                if (parsed.length === 2 && !isNaN(parsed[0]) && !isNaN(parsed[1])) {
+                    center = parsed;
+                }
+            }
+        }
+        
+        if (params.default_zoom) {
+            zoom = parseInt(params.default_zoom) || 6;
+        }
+        
+        const map = L.map(mapContainer).setView(center, zoom);
         
         // Ajouter la couche OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1079,40 +1134,58 @@
             toggleBtn.classList.remove('btn-outline-primary');
             toggleBtn.classList.add('btn-primary');
             
+            // Sauvegarder la config originale
+            originalConfig = _.cloneDeep(currentConfig);
+            
             // Activer le drag & drop
+            if (grid) {
+                grid.enableMove();
+                grid.enableResize();
+                grid.enableRemove();
+            }
+            
+            // Mettre à jour les attributs des widgets existants
             document.querySelectorAll('.grid-stack-item').forEach(item => {
                 item.setAttribute('gs-no-move', 'false');
                 item.setAttribute('gs-no-resize', 'false');
                 item.setAttribute('gs-locked', 'false');
             });
             
-            // Sauvegarder la config originale
-            originalConfig = _.cloneDeep(currentConfig);
-            
-            grid.enableMove();
-            grid.enableResize();
-            
         } else {
             // Désactiver le mode édition
             editModeToolbar.style.display = 'none';
-            editModeText.textContent = t.configure;
+            editModeText.textContent = t.customize;
             toggleBtn.classList.remove('btn-primary');
             toggleBtn.classList.add('btn-outline-primary');
             
             // Désactiver le drag & drop
+            if (grid) {
+                grid.disableMove();
+                grid.disableResize();
+                grid.disableRemove();
+            }
+            
+            // Mettre à jour les attributs
             document.querySelectorAll('.grid-stack-item').forEach(item => {
                 item.setAttribute('gs-no-move', 'true');
                 item.setAttribute('gs-no-resize', 'true');
                 item.setAttribute('gs-locked', 'true');
             });
             
-            grid.disableMove();
-            grid.disableResize();
-            
             // Annuler les changements non sauvegardés
             if (originalConfig) {
                 currentConfig = _.cloneDeep(originalConfig);
                 renderDashboard(currentConfig);
+                
+                // Recharger GridStack après avoir ré-rendu
+                setTimeout(() => {
+                    if (grid) {
+                        grid.enableMove(false);
+                        grid.enableResize(false);
+                        grid.enableRemove(false);
+                    }
+                }, 100);
+                
                 loadAllWidgetsData();
             }
         }

@@ -1,0 +1,94 @@
+werkzeug.routing.exceptions.BuildError
+
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'save_dashboard_config'. Did you mean 'api_save_dashboard_config' instead?
+Traceback (most recent call last)
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\app.py", line 2213, in __call__
+
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\app.py", line 2193, in wsgi_app
+
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\app.py", line 2190, in wsgi_app
+
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\app.py", line 1486, in full_dispatch_request
+
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\app.py", line 1484, in full_dispatch_request
+
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\app.py", line 1469, in dispatch_request
+
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask_login\utils.py", line 290, in decorated_view
+
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\Documents\qrhone\Test_vibe\certificate_retrieval\app_sqlalchemy.py", line 1507, in operations_dashboard
+
+    return render_template(
+           
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\templating.py", line 151, in render_template
+
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\templating.py", line 132, in _render
+
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\jinja2\environment.py", line 1295, in render
+
+    self.environment.handle_exception()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\jinja2\environment.py", line 942, in handle_exception
+
+    raise rewrite_traceback_stack(source=source)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\Documents\qrhone\Test_vibe\certificate_retrieval\templates\operations.html", line 1, in top-level template code
+
+    {% extends "base.html" %}
+
+    File "C:\Users\Admin\Documents\qrhone\Test_vibe\certificate_retrieval\templates\base.html", line 149, in top-level template code
+
+    {% block content %}{% endblock %}
+
+    File "C:\Users\Admin\Documents\qrhone\Test_vibe\certificate_retrieval\templates\operations.html", line 362, in block 'content'
+
+    fetch('{{ url_for("save_dashboard_config") }}', {
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\app.py", line 1697, in url_for
+
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\flask\app.py", line 1686, in url_for
+
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         
+
+    File "C:\Users\Admin\AppData\Roaming\Python\Python314\site-packages\werkzeug\routing\map.py", line 901, in build
+
+    raise BuildError(endpoint, values, method, self)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'save_dashboard_config'. Did you mean 'api_save_dashboard_config' instead?
+

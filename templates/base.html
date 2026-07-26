@@ -237,7 +237,7 @@
             });
             
             // Load saved configuration
-            fetch('{{ url_for("get_dashboard_config") }}')
+            fetch('{{ url_for("api_get_dashboard_config") }}')
                 .then(response => response.json())
                 .then(data => {
                     if (data.grid_data && data.grid_data.length > 0) {

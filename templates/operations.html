@@ -455,64 +455,40 @@
                 gridInstance.setStatic(true);
             }
             
-            // Load saved configuration or use defaults
+            // Define default widgets with non-overlapping positions
+            const defaultWidgets = [
+                { id: 'stats', content: createStatsWidget(), w: 4, h: 3, x: 0, y: 0 },
+                { id: 'timeline', content: createTimelineWidget(), w: 8, h: 4, x: 4, y: 0 },
+                { id: 'map', content: createMapWidget(), w: 6, h: 5, x: 0, y: 4 },
+                { id: 'data', content: createDataWidget(), w: 6, h: 5, x: 6, y: 4 }
+            ];
+            
+            // Load widgets immediately without waiting for API
+            defaultWidgets.forEach((widget) => {
+                const item = gridInstance.addWidget(widget);
+                
+                // Load widget content immediately
+                refreshWidgetContent(item.el);
+                
+                item.el.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('widget-action-btn') || 
+                        e.target.closest('.widget-action-btn')) {
+                        return;
+                    }
+                    refreshWidgetContent(item.el);
+                });
+            });
+            
+            // Try to load saved configuration (optional - for future use)
             apiFetch('{{ url_for("api_get_dashboard_config") }}')
                 .then(response => response.json())
                 .then(data => {
-                    // Clear any existing widgets
-                    if (gridInstance) {
-                        gridInstance.removeAll(true);
-                    }
-                    
-                    // Always use default widgets with non-overlapping positions
-                    const defaultWidgets = [
-                        { id: 'stats', content: createStatsWidget(), w: 4, h: 3, x: 0, y: 0 },
-                        { id: 'timeline', content: createTimelineWidget(), w: 8, h: 4, x: 4, y: 0 },
-                        { id: 'map', content: createMapWidget(), w: 6, h: 5, x: 0, y: 4 },
-                        { id: 'data', content: createDataWidget(), w: 6, h: 5, x: 6, y: 4 }
-                    ];
-                    
-                    defaultWidgets.forEach((widget) => {
-                        const item = gridInstance.addWidget(widget);
-                        
-                        // Load widget content immediately
-                        refreshWidgetContent(item.el);
-                        
-                        item.el.addEventListener('click', function(e) {
-                            if (e.target.classList.contains('widget-action-btn') || 
-                                e.target.closest('.widget-action-btn')) {
-                                return;
-                            }
-                            refreshWidgetContent(item.el);
-                        });
-                    });
+                    // If we have a valid saved layout, we could apply it here
+                    // For now, just keep the default widgets
+                    console.log('Dashboard config loaded:', data);
                 })
                 .catch(error => {
                     console.error('Error loading dashboard config:', error);
-                    // Load default widgets on error
-                    const defaultWidgets = [
-                        { id: 'stats', content: createStatsWidget(), w: 4, h: 3, x: 0, y: 0 },
-                        { id: 'timeline', content: createTimelineWidget(), w: 8, h: 4, x: 4, y: 0 },
-                        { id: 'map', content: createMapWidget(), w: 6, h: 5, x: 0, y: 4 },
-                        { id: 'data', content: createDataWidget(), w: 6, h: 5, x: 6, y: 4 }
-                    ];
-                    
-                    if (gridInstance) {
-                        gridInstance.removeAll(true);
-                    }
-                    
-                    defaultWidgets.forEach((widget) => {
-                        const item = gridInstance.addWidget(widget);
-                        refreshWidgetContent(item.el);
-                        
-                        item.el.addEventListener('click', function(e) {
-                            if (e.target.classList.contains('widget-action-btn') || 
-                                e.target.closest('.widget-action-btn')) {
-                                return;
-                            }
-                            refreshWidgetContent(item.el);
-                        });
-                    });
                 });
             
             // Disable remove by default
@@ -850,7 +826,13 @@
             const grid = gridInstance || GridStack.getGridByNode(document.querySelector('.grid-stack'));
             if (grid) {
                 const widgetEl = btn.closest('.grid-stack-item');
-                grid.remove(widgetEl, false);
+                if (widgetEl) {
+                    grid.remove(widgetEl, false);
+                } else {
+                    console.error('Could not find grid-stack-item parent');
+                }
+            } else {
+                console.error('Grid instance not found');
             }
         }
         

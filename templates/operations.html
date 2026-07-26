@@ -362,8 +362,7 @@
             fetch('{{ url_for("api_save_dashboard_config") }}', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ grid_data: gridData })
             }).then(response => {

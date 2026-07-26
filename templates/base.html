@@ -56,12 +56,6 @@
                             <span>Opérations</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="#" class="{% if request.path == '/expirations' %}active{% endif %}">
-                            <i class="fas fa-calendar-alt nav-icon"></i>
-                            <span>Expirations</span>
-                        </a>
-                    </li>
                     {% if current_user.role == 'admin' %}
                     <li>
                         <a href="{{ url_for('admin_users') }}" class="{% if request.path.startswith('/admin') %}active{% endif %}">
@@ -83,8 +77,8 @@
             <!-- Top Navigation Bar -->
             <header class="topbar">
                 <div class="topbar-left">
-                    <button class="menu-toggle" onclick="toggleSidebar()">
-                        <i class="fas fa-bars"></i>
+                    <button class="menu-toggle" onclick="toggleSidebar()" id="pin-toggle" title="Épingler/Désépingler le menu">
+                        <i class="fas fa-thumbtack"></i>
                     </button>
                     {% block breadcrumb %}
                     <nav class="breadcrumb">
@@ -170,23 +164,98 @@
     </div>
     
     <script>
-        // Sidebar toggle for mobile
+        // Sidebar behavior
+        let sidebarPinned = true;
+        
         function toggleSidebar() {
             const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('open');
+            const mainContent = document.querySelector('.main-content');
+            const pinToggle = document.getElementById('pin-toggle');
+            
+            if (sidebarPinned) {
+                // Unpin sidebar - will auto-hide
+                sidebar.classList.remove('pinned');
+                sidebarPinned = false;
+                mainContent.style.marginLeft = '0';
+            } else {
+                // Pin sidebar - will stay open
+                sidebar.classList.add('pinned');
+                sidebarPinned = true;
+                mainContent.style.marginLeft = 'var(--sidebar-width)';
+            }
+            
+            // Update pin icon
+            if (pinToggle) {
+                pinToggle.innerHTML = sidebarPinned ? 
+                    '<i class="fas fa-thumbtack"></i>' : 
+                    '<i class="far fa-thumbtack"></i>';
+            }
         }
+        
+        // Auto-hide sidebar on mouse leave when not pinned
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const pinToggle = document.getElementById('pin-toggle');
+            
+            if (sidebar && mainContent) {
+                // Initially pinned
+                sidebar.classList.add('pinned');
+                mainContent.style.marginLeft = 'var(--sidebar-width)';
+                
+                // On mouse enter - show sidebar
+                sidebar.addEventListener('mouseenter', function() {
+                    if (!sidebarPinned) {
+                        mainContent.style.marginLeft = 'var(--sidebar-width)';
+                    }
+                });
+                
+                // On mouse leave - hide sidebar if not pinned
+                sidebar.addEventListener('mouseleave', function() {
+                    if (!sidebarPinned) {
+                        mainContent.style.marginLeft = '0';
+                    }
+                });
+                
+                // Update pin icon based on state
+                function updatePinIcon() {
+                    if (pinToggle) {
+                        pinToggle.innerHTML = sidebarPinned ? 
+                            '<i class="fas fa-thumbtack"></i>' : 
+                            '<i class="far fa-thumbtack"></i>';
+                    }
+                }
+                
+                updatePinIcon();
+            }
+        });
         
         // User menu dropdown
         document.addEventListener('DOMContentLoaded', function() {
             const userMenu = document.querySelector('.user-menu');
             if (userMenu) {
+                const dropdown = userMenu.querySelector('.user-dropdown');
+                
                 userMenu.addEventListener('click', function(e) {
-                    if (e.target === userMenu || e.target === userMenu.querySelector('.user-avatar') || 
-                        e.target === userMenu.querySelector('span') || e.target === userMenu.querySelector('.fa-chevron-down')) {
-                        const dropdown = userMenu.querySelector('.user-dropdown');
+                    // Toggle dropdown only when clicking on the user-menu itself (not inside dropdown)
+                    if (e.target === userMenu || 
+                        e.target === userMenu.querySelector('.user-avatar') || 
+                        e.target === userMenu.querySelector('span') || 
+                        e.target === userMenu.querySelector('.fa-chevron-down')) {
+                        e.stopPropagation();
                         dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
                     }
                 });
+                
+                // Close dropdown when clicking on any dropdown item
+                if (dropdown) {
+                    dropdown.addEventListener('click', function(e) {
+                        // Don't close if clicking on a sub-element that might have its own handler
+                        if (e.target.tagName === 'A' || e.target.tagName === 'DIV') {
+                            dropdown.style.display = 'none';
+                        }
+                    });
+                }
             }
             
             // Close dropdown when clicking outside

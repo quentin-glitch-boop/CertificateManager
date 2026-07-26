@@ -328,8 +328,10 @@
                 });
                 
                 // Enable widget controls
-                grid.enableMove();
-                grid.enableResize();
+                if (grid) {
+                    grid.moveEnabled = true;
+                    grid.resizeEnabled = true;
+                }
                 
             } else {
                 // Exit edit mode
@@ -344,8 +346,10 @@
                 });
                 
                 // Disable widget controls
-                grid.disableMove();
-                grid.disableResize();
+                if (grid) {
+                    grid.moveEnabled = false;
+                    grid.resizeEnabled = false;
+                }
             }
         }
         
@@ -385,8 +389,10 @@
             });
             
             // Disable move/resize by default
-            grid.disableMove();
-            grid.disableResize();
+            if (grid) {
+                grid.moveEnabled = false;
+                grid.resizeEnabled = false;
+            }
             
             // Load saved configuration
             fetch('{{ url_for("api_get_dashboard_config") }}')

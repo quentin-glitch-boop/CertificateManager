@@ -107,6 +107,23 @@ img {
     box-shadow: var(--shadow-lg);
     transition: var(--transition);
     overflow-y: auto;
+    transform: translateX(-90%);
+}
+
+.sidebar:hover {
+    transform: translateX(0);
+}
+
+.sidebar.open {
+    transform: translateX(0);
+}
+
+.sidebar.pinned {
+    transform: translateX(0);
+}
+
+.sidebar.pinned:hover {
+    transform: translateX(0);
 }
 
 .sidebar-header {
@@ -302,15 +319,36 @@ img {
     color: var(--text-light);
 }
 
+/* User avatar styles */
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--text-white);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.user-avatar-sm {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+}
+
 /* =====================================================
    Main Content Area
    ===================================================== */
 
 .main-content {
     flex: 1;
-    margin-left: var(--sidebar-width);
+    margin-left: 0;
     padding-top: var(--topbar-height);
     min-height: 100vh;
+    transition: var(--transition);
 }
 
 .page-header {

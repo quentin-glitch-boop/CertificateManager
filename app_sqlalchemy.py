@@ -966,6 +966,33 @@ def inject_global_vars():
 @app.route("/health")
 def health():
     """Health check endpoint for Railway"""
+    # Initialize database on first healthcheck if not already done
+    from app_sqlalchemy import db, init_db
+    from flask import current_app
+    
+    try:
+        # Check if DB is already initialized by trying a simple query
+        with current_app.app_context():
+            # Try to execute a simple query to test connection
+            db.session.execute("SELECT 1")
+    except:
+        # DB not ready, initialize with retries
+        max_retries = 5
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                init_db()
+                break
+            except Exception as e:
+                retry_count += 1
+                import time
+                wait_time = 2 ** retry_count
+                if retry_count < max_retries:
+                    time.sleep(wait_time)
+                else:
+                    raise
+    
     return "OK", 200
 
 

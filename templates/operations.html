@@ -331,10 +331,11 @@
         
         let editMode = false;
         let originalGridData = [];
+        let gridInstance = null;
         
         function toggleEditMode() {
             editMode = !editMode;
-            const grid = GridStack.getGridByNode(document.querySelector('.grid-stack'));
+            const grid = gridInstance || GridStack.getGridByNode(document.querySelector('.grid-stack'));
             const sidebar = document.querySelector('.sidebar');
             
             if (editMode) {
@@ -383,7 +384,7 @@
         }
         
         function cancelEdit() {
-            const grid = GridStack.getGridByNode(document.querySelector('.grid-stack'));
+            const grid = gridInstance || GridStack.getGridByNode(document.querySelector('.grid-stack'));
             if (grid) {
                 grid.load(originalGridData);
             }
@@ -391,7 +392,7 @@
         }
         
         function saveDashboard() {
-            const grid = GridStack.getGridByNode(document.querySelector('.grid-stack'));
+            const grid = gridInstance || GridStack.getGridByNode(document.querySelector('.grid-stack'));
             if (!grid) return;
             const gridData = grid.save(false);
             
@@ -439,7 +440,7 @@
         
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            const grid = GridStack.init({
+            gridInstance = GridStack.init({
                 float: true,
                 cellHeight: '70px',
                 minRow: 1,
@@ -450,8 +451,8 @@
             });
             
             // Disable move/resize by default
-            if (grid) {
-                grid.setStatic(true);
+            if (gridInstance) {
+                gridInstance.setStatic(true);
             }
             
             // Load saved configuration
@@ -882,9 +883,11 @@
         }
         
         function removeWidget(btn) {
-            const grid = GridStack.getGridByNode(document.querySelector('.grid-stack'));
-            const widgetEl = btn.closest('.grid-stack-item');
-            grid.remove(widgetEl, false);
+            const grid = gridInstance || GridStack.getGridByNode(document.querySelector('.grid-stack'));
+            if (grid) {
+                const widgetEl = btn.closest('.grid-stack-item');
+                grid.remove(widgetEl, false);
+            }
         }
         
 

@@ -5,724 +5,267 @@
 
 {% block extra_css %}
 <style>
-    /* Custom styles for operations page */
-    .operations-header {
-        margin-bottom: var(--spacing-xl);
-    }
-    
-    .operations-header h1 {
-        font-size: var(--font-size-title);
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-    
-    .operations-header p {
-        color: var(--text-secondary);
-        margin-top: var(--spacing-xs);
-    }
-    
-    .dashboard-controls {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-md);
-        margin-bottom: var(--spacing-lg);
-    }
-    
-    .btn-customize {
-        background: var(--primary);
-        color: white;
-    }
-    
-    /* Simple dashboard grid layout */
-    .dashboard-grid {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-lg);
-    }
-    
-    .dashboard-row {
-        display: flex;
-        gap: var(--spacing-lg);
-    }
-    
-    .widget-container {
-        flex: 1;
-        min-width: 0;
-        background: var(--card-bg);
-        border: 1px solid var(--border-light);
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow-sm);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .widget-container:hover {
-        box-shadow: var(--shadow-md);
-    }
-    
-    .grid-stack-item-content {
-        padding: var(--spacing-lg);
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-    }
-    
-    .widget-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--spacing-md);
-        padding-bottom: var(--spacing-md);
-        border-bottom: 1px solid var(--border-light);
-    }
-    
-    .widget-title {
-        font-size: var(--font-size-lg);
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-    
-    .widget-actions {
-        display: flex;
-        gap: var(--spacing-xs);
-        opacity: 0;
-        transition: var(--transition);
-    }
-    
-    .widget-container:hover .widget-actions {
-        opacity: 1;
-    }
-    
-    .edit-mode .widget-actions {
-        opacity: 1;
-    }
-    
-    .widget-action-btn {
-        background: none;
-        border: none;
-        padding: var(--spacing-xs) var(--spacing-sm);
-        border-radius: var(--border-radius);
-        cursor: pointer;
-        color: var(--text-light);
-        font-size: var(--font-size-sm);
-        transition: var(--transition);
-    }
-    
-    .widget-action-btn:hover {
-        background: var(--background);
-        color: var(--text-primary);
-    }
-    
-    .widget-action-btn.remove:hover {
-        background: rgba(220, 53, 69, 0.1);
-        color: #dc3545;
-    }
-    
-    .widget-edit-actions {
-        display: none;
-        margin-left: auto;
-    }
-    
-    .edit-mode .widget-edit-actions {
-        display: block;
-    }
-    
-    /* Timeline widget */
-    .widget-timeline {
-        overflow: hidden;
-    }
-    
-    .timeline-container {
-        height: calc(100% - 60px);
-        overflow-y: auto;
-    }
-    
-    .timeline {
-        position: relative;
-        padding-left: var(--spacing-xl);
-    }
-    
-    .timeline::before {
-        content: '';
-        position: absolute;
-        left: 6px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: var(--border-light);
-    }
-    
-    .timeline-item {
-        position: relative;
-        padding-bottom: var(--spacing-xl);
-    }
-    
-    .timeline-item::before {
-        content: '';
-        position: absolute;
-        left: -24px;
-        top: 4px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: var(--primary);
-        border: 3px solid var(--card-bg);
-    }
-    
-    .timeline-date {
-        font-size: var(--font-size-sm);
-        color: var(--text-secondary);
-        margin-bottom: var(--spacing-xs);
-    }
-    
-    .timeline-content {
-        background: var(--background);
-        padding: var(--spacing-md);
-        border-radius: var(--border-radius);
-    }
-    
-    .timeline-document {
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: var(--spacing-xs);
-    }
-    
-    .timeline-status {
-        display: inline-block;
-        padding: var(--spacing-xs) var(--spacing-sm);
-        border-radius: 20px;
-        font-size: var(--font-size-sm);
-        font-weight: 500;
-    }
-    
-    .status-valid {
-        background: rgba(40, 167, 69, 0.1);
-        color: #155724;
-    }
-    
-    .status-expiring {
-        background: rgba(255, 193, 7, 0.1);
-        color: #856404;
-    }
-    
-    .status-expired {
-        background: rgba(220, 53, 69, 0.1);
-        color: #721c24;
-    }
-    
-    /* Map widget */
-    .widget-map {
-        position: relative;
-    }
-    
-    .map-container {
-        height: calc(100% - 50px);
-        border-radius: var(--border-radius);
-        overflow: hidden;
-    }
-    
-    .map-container #map {
-        height: 100%;
-        width: 100%;
-    }
-    
-    /* Statistics widget */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        gap: var(--spacing-md);
-    }
-    
-    .stat-item {
-        background: var(--background);
-        padding: var(--spacing-md);
-        border-radius: var(--border-radius);
-        text-align: center;
-    }
-    
-    .stat-value {
-        font-size: var(--font-size-xl);
-        font-weight: 700;
-        color: var(--primary);
-        display: block;
-    }
-    
-    .stat-label {
-        font-size: var(--font-size-sm);
-        color: var(--text-secondary);
-        margin-top: var(--spacing-xs);
-    }
-    
-    /* Data widget */
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    
-    .data-table th,
-    .data-table td {
-        padding: var(--spacing-sm);
-        text-align: left;
-        border-bottom: 1px solid var(--border-light);
-    }
-    
-    .data-table th {
-        background: var(--background);
-        font-weight: 600;
-        color: var(--text-secondary);
-        font-size: var(--font-size-sm);
-    }
-    
-    .data-table tbody tr:hover {
-        background: rgba(0, 51, 102, 0.05);
-    }
+    .operations-header { margin-bottom: var(--spacing-xl); }
+    .operations-header h1 { font-size: var(--font-size-title); font-weight: 600; color: var(--text-primary); }
+    .operations-header p { color: var(--text-secondary); margin-top: var(--spacing-xs); }
+    .dashboard-controls { display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); }
+    .btn-customize { background: var(--primary); color: white; }
+    .grid-stack { background: transparent; padding: 0; }
+    .grid-stack-item { background: var(--card-bg); border: 1px solid var(--border-light); border-radius: var(--border-radius); box-shadow: var(--shadow-sm); transition: var(--transition); }
+    .grid-stack-item:hover { box-shadow: var(--shadow-md); }
+    .grid-stack-item-content { padding: var(--spacing-lg); height: 100%; display: flex; flex-direction: column; }
+    .widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-light); }
+    .widget-title { font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary); }
+    .widget-actions { display: flex; gap: var(--spacing-xs); opacity: 0; transition: var(--transition); }
+    .grid-stack-item:hover .widget-actions { opacity: 1; }
+    .edit-mode .widget-actions { opacity: 1; }
+    .widget-action-btn { background: none; border: none; padding: var(--spacing-xs) var(--spacing-sm); border-radius: var(--border-radius); cursor: pointer; color: var(--text-light); font-size: var(--font-size-sm); transition: var(--transition); }
+    .widget-action-btn:hover { background: var(--background); color: var(--text-primary); }
+    .widget-action-btn.remove:hover { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .widget-edit-actions { display: none; margin-left: auto; }
+    .edit-mode .widget-edit-actions { display: block; }
+    .widget-timeline { overflow: hidden; }
+    .timeline-container { height: calc(100% - 60px); overflow-y: auto; }
+    .timeline { position: relative; padding-left: var(--spacing-xl); }
+    .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--border-light); }
+    .timeline-item { position: relative; padding-bottom: var(--spacing-xl); }
+    .timeline-item::before { content: ''; position: absolute; left: -24px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); border: 3px solid var(--card-bg); }
+    .timeline-date { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--spacing-xs); }
+    .timeline-content { background: var(--background); padding: var(--spacing-md); border-radius: var(--border-radius); }
+    .timeline-document { font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-xs); }
+    .timeline-status { display: inline-block; padding: var(--spacing-xs) var(--spacing-sm); border-radius: 20px; font-size: var(--font-size-sm); font-weight: 500; }
+    .status-valid { background: rgba(40, 167, 69, 0.1); color: #155724; }
+    .status-expiring { background: rgba(255, 193, 7, 0.1); color: #856404; }
+    .status-expired { background: rgba(220, 53, 69, 0.1); color: #721c24; }
+    .widget-map { position: relative; }
+    .map-container { height: calc(100% - 50px); border-radius: var(--border-radius); overflow: hidden; }
+    .map-container #map { height: 100%; width: 100%; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--spacing-md); }
+    .stat-item { background: var(--background); padding: var(--spacing-md); border-radius: var(--border-radius); text-align: center; }
+    .stat-value { font-size: var(--font-size-xl); font-weight: 700; color: var(--primary); display: block; }
+    .stat-label { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--spacing-xs); }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th, .data-table td { padding: var(--spacing-sm); text-align: left; border-bottom: 1px solid var(--border-light); }
+    .data-table th { background: var(--background); font-weight: 600; color: var(--text-secondary); font-size: var(--font-size-sm); }
+    .data-table tbody tr:hover { background: rgba(0, 51, 102, 0.05); }
 </style>
 {% endblock %}
 
 {% block content %}
-    <div class="operations-header">
-        <h1><i class="fas fa-chart-line me-md"></i> Tableau de bord Opérations</h1>
-        <p>Personnalisez votre espace de travail avec des widgets</p>
-    </div>
-    
-    <div class="dashboard-controls">
-        <button class="btn btn-customize" onclick="toggleEditMode()">
-            <i class="fas fa-cog"></i> 
-            <span id="edit-mode-text">Personnaliser</span>
-        </button>
-        <button class="btn btn-secondary" onclick="saveDashboard()" id="btn-save" style="display: none;">
-            <i class="fas fa-save"></i> Sauvegarder
-        </button>
-        <button class="btn btn-secondary" onclick="cancelEdit()" id="btn-cancel" style="display: none;">
-            <i class="fas fa-times"></i> Annuler
-        </button>
-    </div>
-    
-    <!-- Simple dashboard grid without GridStack -->
-    <div class="dashboard-grid">
-        <div class="dashboard-row">
-            <div class="widget-container" id="widget-stats"></div>
-            <div class="widget-container" id="widget-timeline"></div>
-        </div>
-        <div class="dashboard-row">
-            <div class="widget-container" id="widget-map"></div>
-            <div class="widget-container" id="widget-data"></div>
-        </div>
-    </div>
-    
-    <script>
-        // JWT token for API calls
-        const jwtToken = '{{ jwt_token }}';
-        
-        // Helper function for authorized API calls
-        function apiFetch(url, options = {}) {
-            const defaultOptions = {
-                headers: {
-                    'Authorization': `Bearer ${jwtToken}`,
-                    'Content-Type': 'application/json'
-                }
-            };
-            return fetch(url, { ...defaultOptions, ...options });
-        }
-        
-        let editMode = false;
-        
-        function toggleEditMode() {
-            editMode = !editMode;
-            const sidebar = document.querySelector('.sidebar');
-            
-            if (editMode) {
-                if (sidebar) {
-                    sidebar.style.zIndex = '1040';
-                }
-                document.getElementById('edit-mode-text').textContent = 'Terminer';
-                document.getElementById('btn-save').style.display = 'inline-flex';
-                document.getElementById('btn-cancel').style.display = 'inline-flex';
-                document.querySelectorAll('.widget-edit-actions').forEach(el => {
-                    el.style.display = 'block';
-                });
-            } else {
-                if (sidebar) {
-                    sidebar.style.zIndex = '';
-                }
-                document.getElementById('edit-mode-text').textContent = 'Personnaliser';
-                document.getElementById('btn-save').style.display = 'none';
-                document.getElementById('btn-cancel').style.display = 'none';
-                document.querySelectorAll('.widget-edit-actions').forEach(el => {
-                    el.style.display = 'none';
-                });
-            }
-        }
-        
-        function cancelEdit() {
-            toggleEditMode();
-        }
-        
-        function saveDashboard() {
-            toggleEditMode();
-        }
-        
-        function removeWidget(btn) {
-            const widgetContainer = btn.closest('.widget-container');
-            if (widgetContainer) {
-                widgetContainer.remove();
-            }
-        }
-        
-        // Initialize dashboard with simple HTML insertion
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('widget-stats').innerHTML = createStatsWidget();
-            document.getElementById('widget-timeline').innerHTML = createTimelineWidget();
-            document.getElementById('widget-map').innerHTML = createMapWidget();
-            document.getElementById('widget-data').innerHTML = createDataWidget();
-            
-            refreshWidgetContent(document.getElementById('widget-stats'));
-            refreshWidgetContent(document.getElementById('widget-timeline'));
-            refreshWidgetContent(document.getElementById('widget-map'));
-            refreshWidgetContent(document.getElementById('widget-data'));
-        });
-        
-        function createStatsWidget() {
-            return `
-                <div class="grid-stack-item-content" data-widget-id="stats">
-                    <div class="widget-header">
-                        <div class="widget-title"><i class="fas fa-chart-bar"></i> Statistiques</div>
-                        <div class="widget-actions">
-                            <button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.widget-container'))">
-                                <i class="fas fa-sync"></i> Rafraîchir
-                            </button>
-                        </div>
-                        <div class="widget-edit-actions">
-                            <button class="widget-action-btn remove" onclick="removeWidget(this)">
-                                <i class="fas fa-times"></i> Supprimer
-                            </button>
-                        </div>
-                    </div>
-                    <div class="widget-body">
-                        <div class="stats-grid">
-                            <div class="stat-item">
-                                <span class="stat-value" id="stat-total">-</span>
-                                <span class="stat-label">Total</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value text-success" id="stat-valid">-</span>
-                                <span class="stat-label">Valides</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value text-warning" id="stat-expiring">-</span>
-                                <span class="stat-label">Expirant</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value text-danger" id="stat-expired">-</span>
-                                <span class="stat-label">Expirés</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function createTimelineWidget() {
-            return `
-                <div class="grid-stack-item-content widget-timeline" data-widget-id="timeline">
-                    <div class="widget-header">
-                        <div class="widget-title"><i class="fas fa-calendar-alt"></i> Prochaines Expirations</div>
-                        <div class="widget-actions">
-                            <button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.grid-stack-item'))">
-                                <i class="fas fa-sync"></i> Rafraîchir
-                            </button>
-                        </div>
-                        <div class="widget-edit-actions">
-                            <button class="widget-action-btn remove" onclick="removeWidget(this)">
-                                <i class="fas fa-times"></i> Supprimer
-                            </button>
-                        </div>
-                    </div>
-                    <div class="timeline-container">
-                        <div class="timeline" id="timeline-content">
-                            <!-- Timeline items will be loaded dynamically -->
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function createMapWidget() {
-            return `
-                <div class="grid-stack-item-content widget-map" data-widget-id="map">
-                    <div class="widget-header">
-                        <div class="widget-title"><i class="fas fa-map-marked-alt"></i> Cartographie</div>
-                        <div class="widget-actions">
-                            <button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.grid-stack-item'))">
-                                <i class="fas fa-sync"></i> Rafraîchir
-                            </button>
-                        </div>
-                        <div class="widget-edit-actions">
-                            <button class="widget-action-btn remove" onclick="removeWidget(this)">
-                                <i class="fas fa-times"></i> Supprimer
-                            </button>
-                        </div>
-                    </div>
-                    <div class="map-container">
-                        <div id="map"></div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function createDataWidget() {
-            return `
-                <div class="grid-stack-item-content" data-widget-id="data">
-                    <div class="widget-header">
-                        <div class="widget-title"><i class="fas fa-table"></i> Derniers Documents</div>
-                        <div class="widget-actions">
-                            <button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.grid-stack-item'))">
-                                <i class="fas fa-sync"></i> Rafraîchir
-                            </button>
-                        </div>
-                        <div class="widget-edit-actions">
-                            <button class="widget-action-btn remove" onclick="removeWidget(this)">
-                                <i class="fas fa-times"></i> Supprimer
-                            </button>
-                        </div>
-                    </div>
-                    <div class="widget-body">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Titre</th>
-                                    <th>Type</th>
-                                    <th>Auteur</th>
-                                    <th>Statut</th>
-                                </tr>
-                            </thead>
-                            <tbody id="data-table-body">
-                                <!-- Data will be loaded dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function refreshWidgetContent(widgetEl) {
-            const widgetType = widgetEl.querySelector('.widget-title').textContent;
-            
-            if (widgetType.includes('Statistiques')) {
-                refreshStatsWidget(widgetEl);
-            } else if (widgetType.includes('Expirations')) {
-                refreshTimelineWidget(widgetEl);
-            } else if (widgetType.includes('Cartographie')) {
-                refreshMapWidget(widgetEl);
-            } else if (widgetType.includes('Documents')) {
-                refreshDataWidget(widgetEl);
-            }
-        }
-        
-        function refreshStatsWidget(widgetEl) {
-            apiFetch('{{ url_for("api_get_documents") }}')
-                .then(response => response.json())
-                .then(data => {
-                    const documents = data.documents || data;
-                    const stats = {
-                        total: documents.length,
-                        valid: documents.filter(d => !d.validity_date || new Date(d.validity_date) >= new Date()).length,
-                        expiring: documents.filter(d => d.validity_date && 
-                            new Date(d.validity_date) >= new Date() && 
-                            new Date(d.validity_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).length,
-                        expired: documents.filter(d => d.validity_date && new Date(d.validity_date) < new Date()).length
-                    };
-                    
-                    widgetEl.querySelector('#stat-total').textContent = stats.total;
-                    widgetEl.querySelector('#stat-valid').textContent = stats.valid;
-                    widgetEl.querySelector('#stat-expiring').textContent = stats.expiring;
-                    widgetEl.querySelector('#stat-expired').textContent = stats.expired;
-                });
-        }
-        
-        function refreshTimelineWidget(widgetEl) {
-            apiFetch('{{ url_for("api_get_documents") }}')
-                .then(response => response.json())
-                .then(data => {
-                    // Extract documents array
-                    const documents = data.documents || data;
-                    const timelineEl = widgetEl.querySelector('#timeline-content');
-                    const now = new Date();
-                    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                    
-                    // Filter documents expiring in the next 30 days
-                    const expiringSoon = documents.filter(d => d.validity_date && 
-                        new Date(d.validity_date) >= now && 
-                        new Date(d.validity_date) <= thirtyDaysFromNow)
-                        .sort((a, b) => new Date(a.validity_date) - new Date(b.validity_date));
-                    
-                    const alreadyExpired = documents.filter(d => d.validity_date && new Date(d.validity_date) < now)
-                        .sort((a, b) => new Date(b.validity_date) - new Date(a.validity_date));
-                    
-                    let html = '';
-                    
-                    // Already expired
-                    alreadyExpired.slice(0, 3).forEach(doc => {
-                        const author = doc.author || doc.username || 'Inconnu';
-                        html += `
-                            <div class="timeline-item">
-                                <div class="timeline-date">
-                                    <i class="fas fa-calendar-times text-danger"></i> 
-                                    ${formatDate(doc.validity_date)}
-                                </div>
-                                <div class="timeline-content">
-                                    <div class="timeline-document">${doc.title}</div>
-                                    <div class="text-sm text-secondary">Auteur: ${author}</div>
-                                    <span class="timeline-status status-expired">Expiré</span>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    // Expiring soon
-                    expiringSoon.forEach(doc => {
-                        const daysLeft = Math.ceil((new Date(doc.validity_date) - now) / (1000 * 60 * 60 * 24));
-                        const statusClass = daysLeft <= 7 ? 'status-expiring' : 'status-valid';
-                        const statusText = daysLeft <= 7 ? 'Expirant bientôt' : 'Valide';
-                        const author = doc.author || doc.username || 'Inconnu';
-                        
-                        html += `
-                            <div class="timeline-item">
-                                <div class="timeline-date">
-                                    <i class="fas fa-calendar-check text-warning"></i> 
-                                    ${formatDate(doc.validity_date)} (${daysLeft} jour${daysLeft > 1 ? 's' : ''})
-                                </div>
-                                <div class="timeline-content">
-                                    <div class="timeline-document">${doc.title}</div>
-                                    <div class="text-sm text-secondary">Auteur: ${author}</div>
-                                    <span class="timeline-status ${statusClass}">${statusText}</span>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    if (alreadyExpired.length === 0 && expiringSoon.length === 0) {
-                        html = '<div class="text-center text-secondary p-md">Aucune expiration proche</div>';
-                    }
-                    
-                    timelineEl.innerHTML = html;
-                });
-        }
-        
-        function refreshMapWidget(widgetEl) {
-            const mapEl = widgetEl.querySelector('#map');
-            
-            if (window.mapInstance) {
-                window.mapInstance.remove();
-            }
-            
-            const map = L.map(mapEl).setView([46.603354, 1.888334], 5);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-            
-            apiFetch('{{ url_for("api_get_documents") }}')
-                .then(response => response.json())
-                .then(data => {
-                    // Site coordinates mapping based on site name from attributes
-                    const siteCoordinates = {
-                        'Besancon': [47.2378, 6.0241],
-                        'Ashland': [37.1347, -84.8850],
-                        'Lyon': [45.7640, 4.8357],
-                        'Bornem': [51.2000, 4.3000],
-                        'Merck': [40.7589, -73.9851],
-                        'Vervier': [50.5833, 5.8500],
-                        'Visp': [46.3167, 7.8833],
-                        'Thermofisher': [42.3601, -71.0589],
-                        'Lonza Colmar': [48.0800, 7.3500],
-                        'Lonza Bornem': [51.2000, 4.3000],
-                        'Default': [46.603354, 1.888334]
-                    };
-                    
-                    data.documents.forEach(doc => {
-                        // Extract site from attributes
-                        let site = 'Default';
-                        if (doc.attributes && doc.attributes.site) {
-                            site = doc.attributes.site;
-                        } else if (doc.attributes && doc.attributes.societe_certifiee) {
-                            site = doc.attributes.societe_certifiee;
-                        }
-                        
-                        const coord = siteCoordinates[site] || siteCoordinates['Default'];
-                        const isValid = !doc.validity_date || new Date(doc.validity_date) >= new Date();
-                        const author = doc.author || doc.username || 'Inconnu';
-                        const icon = L.divIcon({
-                            className: 'map-marker',
-                            html: `<i class="fas fa-${isValid ? 'check-circle' : 'exclamation-circle'} text-${isValid ? 'success' : 'danger'}" style="font-size: 20px;"></i>`,
-                            iconSize: [30, 30]
-                        });
-                        
-                        L.marker(coord, { icon: icon }).addTo(map)
-                            .bindPopup(`<b>${doc.title}</b><br>Auteur: ${author}<br>Site: ${site}<br>Statut: ${isValid ? 'Valide' : 'Expiré'}`);
-                    });
-                });
-            
-            window.mapInstance = map;
-        }
-        
-        function refreshDataWidget(widgetEl) {
-            apiFetch('{{ url_for("api_get_documents") }}')
-                .then(response => response.json())
-                .then(data => {
-                    const documents = data.documents || data;
-                    const tbody = widgetEl.querySelector('#data-table-body');
-                    const latestDocs = documents.sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date)).slice(0, 5);
-                    
-                    let html = '';
-                    latestDocs.forEach(doc => {
-                        const isValid = !doc.validity_date || new Date(doc.validity_date) >= new Date();
-                        const statusClass = isValid ? 'status-valid' : 'status-expired';
-                        const statusText = isValid ? 'Valide' : 'Expiré';
-                        const author = doc.author || doc.username || 'Inconnu';
-                        
-                        html += `
-                            <tr>
-                                <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                    ${doc.title}
-                                </td>
-                                <td>${doc.type || 'N/A'}</td>
-                                <td>${author}</td>
-                                <td><span class="status-dot ${statusClass}"></span> ${statusText}</td>
-                            </tr>
-                        `;
-                    });
-                    
-                    tbody.innerHTML = html;
-                });
-        }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return 'N/A';
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('fr-FR', { 
-                day: '2-digit', 
-                month: '2-digit', 
-                year: 'numeric' 
-            });
-        }
-        
-        function removeWidget(btn) {
-            const grid = gridInstance || GridStack.getGridByNode(document.querySelector('.grid-stack'));
-            if (grid) {
-                const widgetEl = btn.closest('.grid-stack-item');
-                if (widgetEl) {
-                    grid.remove(widgetEl, false);
-                } else {
-                    console.error('Could not find grid-stack-item parent');
-                }
-            } else {
-                console.error('Grid instance not found');
-            }
-        }
-        
+<div class="operations-header">
+    <h1><i class="fas fa-chart-line me-md"></i> Tableau de bord Opérations</h1>
+    <p>Personnalisez votre espace de travail avec des widgets</p>
+</div>
 
-    </script>
+<div class="dashboard-controls">
+    <button class="btn btn-customize" onclick="toggleEditMode()">
+        <i class="fas fa-cog"></i> <span id="edit-mode-text">Personnaliser</span>
+    </button>
+    <button class="btn btn-secondary" onclick="saveDashboard()" id="btn-save" style="display: none;">
+        <i class="fas fa-save"></i> Sauvegarder
+    </button>
+    <button class="btn btn-secondary" onclick="cancelEdit()" id="btn-cancel" style="display: none;">
+        <i class="fas fa-times"></i> Annuler
+    </button>
+</div>
+
+<div class="grid-stack"></div>
+
+<script>
+    const jwtToken = '{{ jwt_token }}';
+    function apiFetch(url, options = {}) {
+        return fetch(url, { 
+            headers: { 'Authorization': `Bearer ${jwtToken}`, 'Content-Type': 'application/json' }, 
+            ...options 
+        });
+    }
+    
+    let editMode = false, originalGridData = [], gridInstance = null;
+    
+    function toggleEditMode() {
+        editMode = !editMode;
+        const sidebar = document.querySelector('.sidebar');
+        if (editMode) {
+            if (sidebar) sidebar.style.zIndex = '1040';
+            document.getElementById('edit-mode-text').textContent = 'Terminer';
+            document.getElementById('btn-save').style.display = 'inline-flex';
+            document.getElementById('btn-cancel').style.display = 'inline-flex';
+            if (gridInstance) originalGridData = gridInstance.save(false);
+            document.querySelectorAll('.widget-edit-actions').forEach(el => el.style.display = 'block');
+            if (gridInstance) gridInstance.setStatic(false);
+        } else {
+            if (sidebar) sidebar.style.zIndex = '';
+            document.getElementById('edit-mode-text').textContent = 'Personnaliser';
+            document.getElementById('btn-save').style.display = 'none';
+            document.getElementById('btn-cancel').style.display = 'none';
+            document.querySelectorAll('.widget-edit-actions').forEach(el => el.style.display = 'none');
+            if (gridInstance) gridInstance.setStatic(true);
+        }
+    }
+    
+    function cancelEdit() {
+        if (gridInstance && originalGridData) gridInstance.load(originalGridData);
+        toggleEditMode();
+    }
+    
+    function saveDashboard() {
+        if (!gridInstance) return;
+        const gridData = gridInstance.save(false);
+        const layout = gridData.map(item => {
+            let widgetId = item.id || `widget_${item.x}_${item.y}`;
+            const contentEl = item.el.querySelector('[data-widget-id]');
+            if (contentEl) widgetId = contentEl.getAttribute('data-widget-id');
+            return { widget_id: widgetId, x: item.x, y: item.y, w: item.w, h: item.h };
+        });
+        const widgets = {};
+        gridData.forEach(item => {
+            let widgetId = item.id || `widget_${item.x}_${item.y}`;
+            const contentEl = item.el.querySelector('[data-widget-id]');
+            if (contentEl) widgetId = contentEl.getAttribute('data-widget-id');
+            widgets[widgetId] = { enabled: true, params: {} };
+        });
+        apiFetch('{{ url_for("api_save_dashboard_config") }}', {
+            method: 'POST',
+            body: JSON.stringify({ config_name: 'default', layout: layout, widgets: widgets })
+        }).then(response => { if (response.ok) toggleEditMode(); });
+    }
+    
+    function removeWidget(btn) {
+        if (!gridInstance) return;
+        const widgetEl = btn.closest('.grid-stack-item');
+        if (widgetEl) gridInstance.remove(widgetEl, false);
+    }
+    
+    function createStatsWidget() {
+        return `<div class="grid-stack-item-content" data-widget-id="stats">
+            <div class="widget-header">
+                <div class="widget-title"><i class="fas fa-chart-bar"></i> Statistiques</div>
+                <div class="widget-actions"><button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.grid-stack-item'))"><i class="fas fa-sync"></i> Rafraîchir</button></div>
+                <div class="widget-edit-actions"><button class="widget-action-btn remove" onclick="removeWidget(this)"><i class="fas fa-times"></i> Supprimer</button></div>
+            </div>
+            <div class="widget-body">
+                <div class="stats-grid">
+                    <div class="stat-item"><span class="stat-value" id="stat-total">-</span><span class="stat-label">Total</span></div>
+                    <div class="stat-item"><span class="stat-value text-success" id="stat-valid">-</span><span class="stat-label">Valides</span></div>
+                    <div class="stat-item"><span class="stat-value text-warning" id="stat-expiring">-</span><span class="stat-label">Expirant</span></div>
+                    <div class="stat-item"><span class="stat-value text-danger" id="stat-expired">-</span><span class="stat-label">Expirés</span></div>
+                </div>
+            </div>
+        </div>`;
+    }
+    
+    function createTimelineWidget() {
+        return `<div class="grid-stack-item-content widget-timeline" data-widget-id="timeline">
+            <div class="widget-header">
+                <div class="widget-title"><i class="fas fa-calendar-alt"></i> Prochaines Expirations</div>
+                <div class="widget-actions"><button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.grid-stack-item'))"><i class="fas fa-sync"></i> Rafraîchir</button></div>
+                <div class="widget-edit-actions"><button class="widget-action-btn remove" onclick="removeWidget(this)"><i class="fas fa-times"></i> Supprimer</button></div>
+            </div>
+            <div class="timeline-container"><div class="timeline" id="timeline-content"></div></div>
+        </div>`;
+    }
+    
+    function createMapWidget() {
+        return `<div class="grid-stack-item-content widget-map" data-widget-id="map">
+            <div class="widget-header">
+                <div class="widget-title"><i class="fas fa-map-marked-alt"></i> Cartographie</div>
+                <div class="widget-actions"><button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.grid-stack-item'))"><i class="fas fa-sync"></i> Rafraîchir</button></div>
+                <div class="widget-edit-actions"><button class="widget-action-btn remove" onclick="removeWidget(this)"><i class="fas fa-times"></i> Supprimer</button></div>
+            </div>
+            <div class="map-container"><div id="map"></div></div>
+        </div>`;
+    }
+    
+    function createDataWidget() {
+        return `<div class="grid-stack-item-content" data-widget-id="data">
+            <div class="widget-header">
+                <div class="widget-title"><i class="fas fa-table"></i> Derniers Documents</div>
+                <div class="widget-actions"><button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.grid-stack-item'))"><i class="fas fa-sync"></i> Rafraîchir</button></div>
+                <div class="widget-edit-actions"><button class="widget-action-btn remove" onclick="removeWidget(this)"><i class="fas fa-times"></i> Supprimer</button></div>
+            </div>
+            <div class="widget-body">
+                <table class="data-table">
+                    <thead><tr><th>Titre</th><th>Type</th><th>Auteur</th><th>Statut</th></tr></thead>
+                    <tbody id="data-table-body"></tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+    
+    function refreshWidgetContent(widgetEl) {
+        const widgetType = widgetEl.querySelector('.widget-title').textContent;
+        if (widgetType.includes('Statistiques')) refreshStatsWidget(widgetEl);
+        else if (widgetType.includes('Expirations')) refreshTimelineWidget(widgetEl);
+        else if (widgetType.includes('Cartographie')) refreshMapWidget(widgetEl);
+        else if (widgetType.includes('Documents')) refreshDataWidget(widgetEl);
+    }
+    
+    function refreshStatsWidget(widgetEl) {
+        apiFetch('{{ url_for("api_get_documents") }}').then(r => r.json()).then(data => {
+            const docs = data.documents || data;
+            widgetEl.querySelector('#stat-total').textContent = docs.length;
+            widgetEl.querySelector('#stat-valid').textContent = docs.filter(d => !d.validity_date || new Date(d.validity_date) >= new Date()).length;
+            widgetEl.querySelector('#stat-expiring').textContent = docs.filter(d => d.validity_date && new Date(d.validity_date) >= new Date() && new Date(d.validity_date) <= new Date(Date.now() + 30*24*60*60*1000)).length;
+            widgetEl.querySelector('#stat-expired').textContent = docs.filter(d => d.validity_date && new Date(d.validity_date) < new Date()).length;
+        });
+    }
+    
+    function refreshTimelineWidget(widgetEl) {
+        apiFetch('{{ url_for("api_get_documents") }}').then(r => r.json()).then(data => {
+            const docs = data.documents || data; const now = new Date(); const in30Days = new Date(Date.now() + 30*24*60*60*1000);
+            const timelineEl = widgetEl.querySelector('#timeline-content');
+            const expiringSoon = docs.filter(d => d.validity_date && new Date(d.validity_date) >= now && new Date(d.validity_date) <= in30Days).sort((a,b) => new Date(a.validity_date) - new Date(b.validity_date));
+            const alreadyExpired = docs.filter(d => d.validity_date && new Date(d.validity_date) < now).sort((a,b) => new Date(b.validity_date) - new Date(a.validity_date));
+            let html = '';
+            alreadyExpired.slice(0,3).forEach(doc => { const author = doc.author || doc.username || 'Inconnu'; html += `<div class="timeline-item"><div class="timeline-date"><i class="fas fa-calendar-times text-danger"></i> ${formatDate(doc.validity_date)}</div><div class="timeline-content"><div class="timeline-document">${doc.title}</div><div class="text-sm text-secondary">Auteur: ${author}</div><span class="timeline-status status-expired">Expiré</span></div></div>`; });
+            expiringSoon.forEach(doc => { const daysLeft = Math.ceil((new Date(doc.validity_date)-now)/(1000*60*60*24)); const statusClass = daysLeft<=7?'status-expiring':'status-valid'; const statusText = daysLeft<=7?'Expirant bientôt':'Valide'; const author = doc.author || doc.username || 'Inconnu'; html += `<div class="timeline-item"><div class="timeline-date"><i class="fas fa-calendar-check text-warning"></i> ${formatDate(doc.validity_date)} (${daysLeft} jour${daysLeft>1?'s':''})</div><div class="timeline-content"><div class="timeline-document">${doc.title}</div><div class="text-sm text-secondary">Auteur: ${author}</div><span class="timeline-status ${statusClass}">${statusText}</span></div></div>`; });
+            if(alreadyExpired.length===0 && expiringSoon.length===0) html = '<div class="text-center text-secondary p-md">Aucune expiration proche</div>';
+            timelineEl.innerHTML = html;
+        });
+    }
+    
+    function refreshMapWidget(widgetEl) {
+        const mapEl = widgetEl.querySelector('#map');
+        if(window.mapInstance) window.mapInstance.remove();
+        const map = L.map(mapEl).setView([46.603354, 1.888334], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+        apiFetch('{{ url_for("api_get_documents") }}').then(r => r.json()).then(data => {
+            const siteCoords = {'Besancon':[47.2378,6.0241],'Ashland':[37.1347,-84.8850],'Lyon':[45.7640,4.8357],'Bornem':[51.2000,4.3000],'Merck':[40.7589,-73.9851],'Vervier':[50.5833,5.8500],'Visp':[46.3167,7.8833],'Thermofisher':[42.3601,-71.0589],'Lonza Colmar':[48.0800,7.3500],'Lonza Bornem':[51.2000,4.3000],'Default':[46.603354,1.888334]};
+            data.documents.forEach(doc => {
+                let site = 'Default';
+                if(doc.attributes?.site) site=doc.attributes.site; else if(doc.attributes?.societe_certifiee) site=doc.attributes.societe_certifiee;
+                const coord = siteCoords[site] || siteCoords.Default; const isValid = !doc.validity_date || new Date(doc.validity_date) >= new Date();
+                const author = doc.author || doc.username || 'Inconnu';
+                const icon = L.divIcon({className:'map-marker', html:`<i class="fas fa-${isValid?'check-circle':'exclamation-circle'} text-${isValid?'success':'danger'}" style="font-size:20px;"></i>`, iconSize:[30,30]});
+                L.marker(coord,{icon:icon}).addTo(map).bindPopup(`<b>${doc.title}</b><br>Auteur:${author}<br>Site:${site}<br>Statut:${isValid?'Valide':'Expiré'}`);
+            });
+        });
+        window.mapInstance = map;
+    }
+    
+    function refreshDataWidget(widgetEl) {
+        apiFetch('{{ url_for("api_get_documents") }}').then(r => r.json()).then(data => {
+            const docs = (data.documents || data).sort((a,b) => new Date(b.upload_date) - new Date(a.upload_date)).slice(0,5);
+            const tbody = widgetEl.querySelector('#data-table-body'); let html = '';
+            docs.forEach(doc => { const isValid = !doc.validity_date || new Date(doc.validity_date) >= new Date(); const statusClass = isValid?'status-valid':'status-expired'; const statusText = isValid?'Valide':'Expiré'; const author = doc.author || doc.username || 'Inconnu';
+                html += `<tr><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${doc.title}</td><td>${doc.type||'N/A'}</td><td>${author}</td><td><span class="status-dot ${statusClass}"></span> ${statusText}</td></tr>`;
+            });
+            tbody.innerHTML = html;
+        });
+    }
+    
+    function formatDate(dateStr) { if(!dateStr) return 'N/A'; const date = new Date(dateStr); return date.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+    
+    document.addEventListener('DOMContentLoaded',function(){
+        gridInstance = GridStack.init({float:true,cellHeight:'70px',minRow:1,acceptWidgets:true,removeTimeout:100,oneColumnMode:'mobile',margin:10});
+        if(gridInstance) gridInstance.setStatic(true);
+        const widgets = [
+            {id:'stats',content:createStatsWidget(),w:4,h:3,x:0,y:0},
+            {id:'timeline',content:createTimelineWidget(),w:8,h:4,x:4,y:0},
+            {id:'map',content:createMapWidget(),w:6,h:5,x:0,y:4},
+            {id:'data',content:createDataWidget(),w:6,h:5,x:6,y:4}
+        ];
+        widgets.forEach(w => { const item=gridInstance.addWidget(w); refreshWidgetContent(item.el); });
+    });
+</script>
 {% endblock %}

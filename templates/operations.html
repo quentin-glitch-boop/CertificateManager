@@ -257,27 +257,23 @@
     function formatDate(dateStr) { if(!dateStr) return 'N/A'; const date = new Date(dateStr); return date.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
     
     document.addEventListener('DOMContentLoaded',function(){
-        gridInstance = GridStack.init({float:true,cellHeight:'70px',minRow:1,acceptWidgets:true,removeTimeout:100,oneColumnMode:'mobile',margin:10});
-        if(gridInstance) gridInstance.setStatic(true);
-        
-        // Add each widget individually
-        const statsItem = gridInstance.addWidget({id:'stats',w:4,h:3,x:0,y:0});
-        if(statsItem) statsItem.el.innerHTML = createStatsWidget();
-        
-        const timelineItem = gridInstance.addWidget({id:'timeline',w:8,h:4,x:4,y:0});
-        if(timelineItem) timelineItem.el.innerHTML = createTimelineWidget();
-        
-        const mapItem = gridInstance.addWidget({id:'map',w:6,h:5,x:0,y:4});
-        if(mapItem) mapItem.el.innerHTML = createMapWidget();
-        
-        const dataItem = gridInstance.addWidget({id:'data',w:6,h:5,x:6,y:4});
-        if(dataItem) dataItem.el.innerHTML = createDataWidget();
-        
-        // Refresh content
-        if(statsItem) refreshWidgetContent(statsItem.el);
-        if(timelineItem) refreshWidgetContent(timelineItem.el);
-        if(mapItem) refreshWidgetContent(mapItem.el);
-        if(dataItem) refreshWidgetContent(dataItem.el);
+        // Wait for GridStack to be fully loaded
+        setTimeout(function() {
+            gridInstance = GridStack.init({float:true,cellHeight:'70px',minRow:1,acceptWidgets:true,removeTimeout:100,oneColumnMode:'mobile',margin:10});
+            if(gridInstance) gridInstance.setStatic(true);
+            
+            // Add widgets with content option
+            const statsItem = gridInstance.addWidget({id:'stats', content: createStatsWidget(), w:4, h:3, x:0, y:0});
+            const timelineItem = gridInstance.addWidget({id:'timeline', content: createTimelineWidget(), w:8, h:4, x:4, y:0});
+            const mapItem = gridInstance.addWidget({id:'map', content: createMapWidget(), w:6, h:5, x:0, y:4});
+            const dataItem = gridInstance.addWidget({id:'data', content: createDataWidget(), w:6, h:5, x:6, y:4});
+            
+            // Refresh content
+            if(statsItem) refreshWidgetContent(statsItem.el);
+            if(timelineItem) refreshWidgetContent(timelineItem.el);
+            if(mapItem) refreshWidgetContent(mapItem.el);
+            if(dataItem) refreshWidgetContent(dataItem.el);
+        }, 100);
     });
 </script>
 {% endblock %}

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 70">
+  <!-- Background shield shape -->
+  <path d="M20 10 L50 10 L65 25 L140 25 L155 10 L180 10 L180 60 L20 60 Z" fill="#003366"/>
+  
+  <!-- Document icon on the left side of shield -->
+  <path d="M35 15 L35 45 L50 45 L50 30 L65 30 L65 15 Z" fill="white"/>
+  <path d="M35 15 L50 22 L65 15" stroke="#003366" stroke-width="2" fill="none"/>
+  <path d="M35 18 L65 18" stroke="#003366" stroke-width="1" fill="none"/>
+  <path d="M35 21 L65 21" stroke="#003366" stroke-width="1" fill="none"/>
+  <path d="M35 24 L45 24" stroke="#003366" stroke-width="1" fill="none"/>
+  
+  <!-- Flow/arrow icon on the right side of shield -->
+  <path d="M140 20 L170 20 L160 35" stroke="white" stroke-width="3" fill="none"/>
+  <path d="M145 25 L170 25" stroke="white" stroke-width="2" fill="none"/>
+  
+  <!-- CertiFlow text -->
+  <text x="75" y="32" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" letter-spacing="1">CERTI</text>
+  <text x="75" y="52" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#4682B4" letter-spacing="0.5">FLOW</text>
+  
+  <!-- Small tagline -->
+  <text x="100" y="65" font-family="Arial, sans-serif" font-size="8" fill="#4682B4" text-anchor="middle">Certificate Management</text>
+</svg>

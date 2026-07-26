@@ -1,54 +1,286 @@
-{% extends "base_nonauth.html" %}
-
-{% block title %}{{ t('login') }} - {{ t('doc_manager') }}{% endblock %}
-
-{% block content %}
-<div class="login-container">
-    <div class="login-card card">
-        <div class="card-body">
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - CertiFlow</title>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+        /* Specific styles for login page */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: var(--spacing-xl);
+        }
+        
+        .login-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            padding: var(--spacing-2xl);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .login-logo {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .login-logo img {
+            height: 70px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .login-title {
+            font-size: var(--font-size-title);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-xs);
+            letter-spacing: -0.5px;
+        }
+        
+        .login-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xl);
+            font-size: var(--font-size-base);
+        }
+        
+        .login-form {
+            text-align: left;
+        }
+        
+        .login-form .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .login-form label {
+            display: block;
+            font-size: var(--font-size-base);
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .login-form .form-control {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            padding-left: 45px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius);
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            background: var(--card-bg);
+            transition: var(--transition);
+        }
+        
+        .login-form .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1);
+        }
+        
+        .login-form .form-control::placeholder {
+            color: var(--text-light);
+        }
+        
+        .login-form .input-icon {
+            position: relative;
+        }
+        
+        .login-form .input-icon i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--text-white);
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .login-btn:hover {
+            background: linear-gradient(180deg, var(--primary-hover) 0%, var(--primary) 100%);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .login-btn:active {
+            transform: translateY(0);
+        }
+        
+        .login-footer {
+            margin-top: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border-light);
+            text-align: center;
+            color: var(--text-light);
+            font-size: var(--font-size-sm);
+        }
+        
+        .login-footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .forgot-password {
+            text-align: right;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .forgot-password a {
+            color: var(--primary-light);
+            font-size: var(--font-size-base);
+            text-decoration: none;
+        }
+        
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid rgba(40, 167, 69, 0.3);
+            color: #155724;
+        }
+        
+        .alert-danger {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: #721c24;
+        }
+        
+        .alert i {
+            font-size: var(--font-size-lg);
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .login-card {
+                padding: var(--spacing-xl) var(--spacing-lg);
+            }
+            
+            .login-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
             <div class="login-logo">
-                <i class="bi bi-file-earmark-pdf-fill"></i>
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="CertiFlow Logo">
+                <h1 class="login-title">CertiFlow</h1>
+                <p class="login-subtitle">Gestion des Certificats et Documents</p>
             </div>
-            <h3 class="login-title">{{ t('doc_manager') }}</h3>
             
             <!-- Messages flash -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show mb-4" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">
+                            <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i>
+                            <span>{{ message }}</span>
                         </div>
                     {% endfor %}
                 {% endif %}
             {% endwith %}
             
-            <form method="POST" action="{{ url_for('login') }}">
-                <div class="mb-3">
-                    <label for="username" class="form-label">{{ t('username') }}</label>
-                    <input type="text" class="form-control form-control-lg" id="username" name="username" 
-                           placeholder="{{ t('enter_username') }}" required autofocus>
+            <form method="POST" action="{{ url_for('login') }}" class="login-form">
+                <div class="form-group">
+                    <label for="username">Identifiant</label>
+                    <div class="input-icon">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" name="username" 
+                               class="form-control" 
+                               placeholder="Entrez votre identifiant" required autofocus>
+                    </div>
                 </div>
                 
-                <div class="mb-3">
-                    <label for="password" class="form-label">{{ t('password') }}</label>
-                    <input type="password" class="form-control form-control-lg" id="password" name="password" 
-                           placeholder="{{ t('enter_password') }}" required>
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <div class="input-icon">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" name="password" 
+                               class="form-control" 
+                               placeholder="Entrez votre mot de passe" required>
+                    </div>
                 </div>
                 
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-box-arrow-in-right me-2"></i> {{ t('login') }}
-                    </button>
+                <div class="forgot-password">
+                    <a href="#">Mot de passe oublié ?</a>
                 </div>
+                
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Se connecter
+                </button>
             </form>
             
-            <div class="mt-4 text-center">
-                <p class="text-muted mb-0">
-                    <small>© 2026 {{ t('doc_manager') }}. {{ t('all_rights_reserved') }}</small>
-                </p>
+            <div class="login-footer">
+                <p>© 2026 CertiFlow. Tous droits réservés.</p>
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
+</body>
+</html>

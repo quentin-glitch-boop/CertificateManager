@@ -1,331 +1,317 @@
 {% extends "base.html" %}
 
-{% block title %}{{ t('documents') }} - {{ t('doc_manager') }}{% endblock %}
-
-{% block page_title %}{{ t('my_documents') }}{% endblock %}
+{% block title %}Accueil - CertiFlow{% endblock %}
+{% block breadcrumb_title %}Accueil{% endblock %}
 
 {% block content %}
     <!-- Messages flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">
+                    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i>
+                    <span>{{ message }}</span>
                 </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
-    
+
     <!-- Section de recherche -->
-    <div class="search-section">
-        <h3 class="mb-3">
-            <i class="bi bi-search me-2"></i>
-            {{ t('search') }} {{ t('documents') }}
-        </h3>
-        <form method="GET" action="{{ url_for('index') }}" class="row g-3">
-            <div class="col-md-2">
-                <label for="search_doc_type" class="form-label">{{ t('doc_type') }}</label>
-                <select class="form-select" id="search_doc_type" name="doc_type">
-                    <option value="">{{ t('all_types') }}</option>
-                    {% for type_id, type_config in document_types.items() %}
-                        <option value="{{ type_id }}" {% if search_type == type_id %}selected{% endif %}>
-                            {{ type_config.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label for="author" class="form-label">{{ t('author') }}</label>
-                <input type="text" class="form-control" id="author" name="author" 
-                       value="{{ search_author }}" placeholder="{{ t('search_author') }}...">
-            </div>
-            <div class="col-md-2">
-                <label for="upload_from" class="form-label">{{ t('search_upload_from') }}</label>
-                <input type="date" class="form-control" id="upload_from" name="upload_from" 
-                       value="{{ search_upload_from }}">
-            </div>
-            <div class="col-md-2">
-                <label for="upload_to" class="form-label">{{ t('search_upload_to') }}</label>
-                <input type="date" class="form-control" id="upload_to" name="upload_to" 
-                       value="{{ search_upload_to }}">
-            </div>
-            <div class="col-md-2">
-                <label for="validity_from" class="form-label">{{ t('search_validity_from') }}</label>
-                <input type="date" class="form-control" id="validity_from" name="validity_from" 
-                       value="{{ search_validity_from }}">
-            </div>
-            <div class="col-md-2">
-                <label for="validity_to" class="form-label">{{ t('search_validity_to') }}</label>
-                <input type="date" class="form-control" id="validity_to" name="validity_to" 
-                       value="{{ search_validity_to }}">
-            </div>
-            <div class="col-md-1 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i>
-                </button>
-            </div>
-            <div class="col-12">
-                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-clockwise me-1"></i> {{ t('reset') }}
-                </a>
-            </div>
-        </form>
+    <div class="card mb-lg">
+        <div class="card-header">
+            <h3><i class="fas fa-search me-md"></i> Rechercher des documents</h3>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('index') }}" class="flex flex-col gap-md">
+                <div class="flex gap-lg flex-wrap">
+                    <div class="flex-1 min-w-200">
+                        <label for="search_doc_type" class="form-label mb-xs">Type de document</label>
+                        <select class="form-control select-control" id="search_doc_type" name="doc_type">
+                            <option value="">Tous les types</option>
+                            {% for type_id, type_config in document_types.items() %}
+                                <option value="{{ type_id }}" {% if search_type == type_id %}selected{% endif %}>
+                                    {{ type_config.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-200">
+                        <label for="author" class="form-label mb-xs">Auteur</label>
+                        <input type="text" class="form-control" id="author" name="author" 
+                               value="{{ search_author }}" placeholder="Rechercher par auteur...">
+                    </div>
+                    <div class="flex-1 min-w-200">
+                        <label for="upload_from" class="form-label mb-xs">Date upload (de)</label>
+                        <input type="date" class="form-control" id="upload_from" name="upload_from" 
+                               value="{{ search_upload_from }}">
+                    </div>
+                    <div class="flex-1 min-w-200">
+                        <label for="upload_to" class="form-label mb-xs">Date upload (à)</label>
+                        <input type="date" class="form-control" id="upload_to" name="upload_to" 
+                               value="{{ search_upload_to }}">
+                    </div>
+                    <div class="flex-1 min-w-200">
+                        <label for="validity_from" class="form-label mb-xs">Validité (de)</label>
+                        <input type="date" class="form-control" id="validity_from" name="validity_from" 
+                               value="{{ search_validity_from }}">
+                    </div>
+                    <div class="flex-1 min-w-200">
+                        <label for="validity_to" class="form-label mb-xs">Validité (à)</label>
+                        <input type="date" class="form-control" id="validity_to" name="validity_to" 
+                               value="{{ search_validity_to }}">
+                    </div>
+                </div>
+                <div class="flex gap-md mt-md">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Rechercher
+                    </button>
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-    
+
     <!-- Bouton Ajouter Document -->
-    <div class="d-flex justify-content-end mb-3">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDocumentModal">
-            <i class="bi bi-plus-lg me-1"></i> {{ t('add_document') }}
+    <div class="flex justify-between items-center mb-lg">
+        <h2 class="m-0">
+            <i class="fas fa-file-alt me-md"></i>
+            {% if documents|length == 0 %}
+                Aucun document trouvé
+            {% else %}
+                {{ documents|length }} document(s) trouvé(s)
+            {% endif %}
+        </h2>
+        <button class="btn btn-primary" onclick="openAddDocumentModal()">
+            <i class="fas fa-plus"></i> Ajouter un document
         </button>
     </div>
-    
+
     <!-- Liste des documents -->
-    <div class="row">
-        {% if documents|length == 0 %}
-            <div class="col-12">
-                <div class="empty-state">
-                    <i class="bi bi-file-earmark-x"></i>
-                    <h3>{{ t('no_documents') }}</h3>
-                    <p class="text-muted mt-2">
-                        {{ t('try_search') }} 
-                        <a href="#" data-bs-toggle="modal" data-bs-target="#addDocumentModal" class="text-primary">
-                            {{ t('add_first_document') }}
-                        </a>
-                    </p>
-                </div>
+    {% if documents|length == 0 %}
+        <div class="card text-center py-2xl">
+            <div class="empty-state">
+                <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--text-light); margin-bottom: var(--spacing-lg);"></i>
+                <h3> Aucun document trouvé </h3>
+                <p class="text-secondary mt-md">
+                    Essayez de modifier vos critères de recherche ou 
+                    <a href="#" onclick="openAddDocumentModal()" class="text-primary">
+                        ajoutez votre premier document
+                    </a>
+                </p>
             </div>
-        {% else %}
+        </div>
+    {% else %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
             {% for doc in documents %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="card document-card h-100">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <h5 class="document-title mb-0">
-                                    <i class="bi bi-file-pdf me-2 text-danger"></i>
-                                    {{ doc.title }}
-                                </h5>
-                                <div class="d-flex gap-1">
-                                    <span class="badge bg-secondary">#{{ doc.id }}</span>
-                                    {% if doc.type %}
-                                        <span class="badge bg-info text-dark">{{ doc.type }}</span>
+                <div class="card document-card fade-in">
+                    <div class="card-body">
+                        <div class="flex justify-between items-start mb-md">
+                            <h5 class="document-title mb-0 flex items-center gap-sm">
+                                <i class="fas fa-file-pdf text-danger" style="font-size: 1.2rem;"></i>
+                                {{ doc.title }}
+                            </h5>
+                            <div class="flex gap-xs">
+                                <span class="badge badge-primary">#{{ doc.id }}</span>
+                                {% if doc.type %}
+                                    <span class="badge badge-info">{{ doc.type }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="document-meta">
+                            <div class="flex items-center mb-sm">
+                                <div class="user-avatar user-avatar-sm" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                    {{ doc.username[:1].upper() }}
+                                </div>
+                                <span class="ms-sm"><strong>Auteur:</strong> {{ doc.username }}</span>
+                            </div>
+                            <div class="mb-xs">
+                                <strong>Date upload:</strong> 
+                                {{ (doc.upload_date|string)[:10] if doc.upload_date else 'N/A' }}
+                            </div>
+                            {% if doc.validity_date %}
+                                <div class="flex items-center gap-sm">
+                                    <strong>Valable jusqu'au:</strong> 
+                                    {{ (doc.validity_date|string)[:10] if doc.validity_date else 'N/A' }}
+                                    {% if doc.validity_date < current_date %}
+                                        <span class="badge badge-danger">Expiré</span>
                                     {% endif %}
                                 </div>
-                            </div>
+                            {% endif %}
                             
-                            <div class="document-meta mb-3">
-                                <div class="d-flex align-items-center mb-2">
-                                    <span class="user-avatar me-2">
-                                        {{ doc.username[:1].upper() }}
-                                    </span>
-                                    <span><strong>{{ t('author') }}:</strong> {{ doc.username }}</span>
-                                </div>
-                                <div>
-                                    <strong>{{ t('upload_date') }}:</strong> 
-                                    {{ doc.upload_date[:10] if doc.upload_date else t('n_a') }}
-                                </div>
-                                {% if doc.validity_date %}
-                                    <div class="mt-1">
-                                        <strong>{{ t('valid_until') }}</strong> 
-                                        {{ doc.validity_date }}
-                                        {% if doc.validity_date < current_date %}
-                                            <span class="badge bg-danger ms-2">{{ t('expired') }}</span>
-                                        {% endif %}
-                                    </div>
-                                {% endif %}
-                                
-                                <!-- Afficher les attributs spécifiques au type -->
-                                {% if doc.type and doc.attributes %}
-                                    <div class="mt-2 document-attributes">
-                                        <strong>{{ t('details') }}</strong>
+                            <!-- Attributes -->
+                            {% if doc.type and doc.attributes %}
+                                <div class="mt-md pt-md border-top">
+                                    <strong class="text-sm">Détails:</strong>
+                                    <div class="mt-xs">
                                         {% for attr_name, attr_value in doc.attributes.items() %}
-                                            <div class="ms-3">
-                                                <small>
-                                                    {% if doc.type in document_types %}
-                                                        {{ document_types[doc.type].attributes[attr_name].label if attr_name in document_types[doc.type].attributes else attr_name }}:
-                                                    {% else %}
-                                                        {{ attr_name }}:
-                                                    {% endif %}
-                                                    {{ attr_value }}
-                                                </small>
+                                            <div class="text-sm text-secondary">
+                                                {% if doc.type in document_types %}
+                                                    {{ document_types[doc.type].attributes[attr_name].label if attr_name in document_types[doc.type].attributes else attr_name }}:
+                                                {% else %}
+                                                    {{ attr_name }}:
+                                                {% endif %}
+                                                <span class="text-primary">{{ attr_value }}</span>
                                             </div>
                                         {% endfor %}
                                     </div>
-                                {% endif %}
-                            </div>
-                            
-                            {% if doc.content %}
-                                <p class="card-text text-muted mb-3" style="font-size: 0.875rem;">
-                                    {{ doc.content[:150] }}
-                                    {% if doc.content|length > 150 %}...{% endif %}
-                                </p>
+                                </div>
                             {% endif %}
-                            
-                            <div class="d-flex gap-2 mt-3">
-                                {% if doc.file_path %}
-                                    <a href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" 
-                                       target="_blank" 
-                                       class="btn btn-outline-primary btn-sm action-btn">
-                                        <i class="bi bi-box-arrow-up-right me-1"></i> {{ t('open_pdf') }}
-                                    </a>
-                                {% endif %}
-                                {% if current_user.id == doc.user_id or current_user.role == 'admin' %}
-                                    <a href="{{ url_for('delete_document', doc_id=doc.id) }}" 
-                                       class="btn btn-outline-danger btn-sm action-btn"
-                                       onclick="return confirm('{{ t('are_you_sure') }}')">
-                                        <i class="bi bi-trash me-1"></i> {{ t('delete') }}
-                                    </a>
-                                {% endif %}
-                            </div>
+                        </div>
+                        
+                        {% if doc.content %}
+                            <p class="text-secondary text-sm mt-md" style="max-height: 60px; overflow: hidden;">
+                                {{ doc.content[:150] }}
+                                {% if doc.content|length > 150 %}...{% endif %}
+                            </p>
+                        {% endif %}
+                        
+                        <div class="flex gap-sm mt-md pt-md border-top">
+                            {% if doc.file_path %}
+                                <a href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-external-link-alt"></i> Ouvrir
+                                </a>
+                            {% endif %}
+                            {% if current_user.id == doc.user_id or current_user.role == 'admin' %}
+                                <a href="{{ url_for('delete_document', doc_id=doc.id) }}" 
+                                   class="btn btn-sm btn-danger"
+                                   onclick="return confirm('Etes-vous sûr de vouloir supprimer ce document ?')">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             {% endfor %}
-        {% endif %}
-    </div>
-    
-    <!-- Modal Ajouter Document -->
-    <div class="modal fade" id="addDocumentModal" tabindex="-1" aria-labelledby="addDocumentModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addDocumentModalLabel">
-                        <i class="bi bi-file-earmark-plus me-2"></i>
-                        {{ t('add_document') }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form method="POST" action="{{ url_for('add_document') }}" enctype="multipart/form-data">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="title" class="form-label">
-                                {{ t('title') }} <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control" id="title" name="title" 
-                                   value="{{ request.form.title if request.method == 'POST' else '' }}" 
-                                   placeholder="{{ t('title') }}..." required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="content" class="form-label">{{ t('content') }} {{ t('optional') }}</label>
-                            <textarea class="form-control" id="content" name="content" 
-                                      rows="3" 
-                                      placeholder="{{ t('content') }}...">
-{{ request.form.content if request.method == 'POST' else '' }}</textarea>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="doc_type" class="form-label">{{ t('doc_type') }}</label>
-                            <select class="form-select" id="doc_type" name="doc_type" required>
-                                <option value="">{{ t('select_type') }}</option>
-                                {% for type_id, type_config in document_types.items() %}
-                                    <option value="{{ type_id }}" {% if request.form.doc_type == type_id %}selected{% endif %}>
-                                        {{ type_config.name }} - {{ type_config.description }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="validity_date" class="form-label">{{ t('validity_date') }}</label>
-                            <input type="date" class="form-control" id="validity_date" name="validity_date" 
-                                   value="{{ request.form.validity_date if request.method == 'POST' else '' }}">
-                        </div>
-                        
-                        <!-- Champs dynamiques pour les attributs spécifiques au type -->
-                        {% for type_id, type_config in document_types.items() %}
-                        <div id="attrs_{{ type_id }}" class="document-type-fields mb-3" style="display: none;">
-                            {% for attr_name, attr_config in type_config.attributes.items() %}
-                            <div class="mb-3">
-                                <label for="doc_attr_{{ attr_name }}" class="form-label">
-                                    {{ attr_config.label }}
-                                    {% if attr_config.required %}<span class="text-danger">*</span>{% endif %}
-                                </label>
-                                {% if attr_config.form_type == 'textarea' %}
-                                <textarea class="form-control" id="doc_attr_{{ attr_name }}" 
-                                          name="doc_attr_{{ attr_name }}" 
-                                          rows="2"
-                                          {% if attr_config.required %}required{% endif %}>{{ request.form.get('doc_attr_' + attr_name, '') if request.method == 'POST' else '' }}</textarea>
-                                {% elif attr_config.form_type == 'date' %}
-                                <input type="date" class="form-control" id="doc_attr_{{ attr_name }}" 
-                                       name="doc_attr_{{ attr_name }}" 
-                                       value="{{ request.form.get('doc_attr_' + attr_name, '') if request.method == 'POST' else '' }}"
-                                       {% if attr_config.required %}required{% endif %}>
-                                {% elif attr_config.form_type == 'number' %}
-                                <input type="number" class="form-control" id="doc_attr_{{ attr_name }}" 
-                                       name="doc_attr_{{ attr_name }}" 
-                                       value="{{ request.form.get('doc_attr_' + attr_name, '') if request.method == 'POST' else '' }}"
-                                       {% if attr_config.required %}required{% endif %}>
-                                {% else %}
-                                <input type="text" class="form-control" id="doc_attr_{{ attr_name }}" 
-                                       name="doc_attr_{{ attr_name }}" 
-                                       placeholder="{{ attr_config.label }}"
-                                       value="{{ request.form.get('doc_attr_' + attr_name, '') if request.method == 'POST' else '' }}"
-                                       {% if attr_config.required %}required{% endif %}>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% endfor %}
-                        
-                        <div class="mb-3">
-                            <label for="file" class="form-label">
-                                {{ t('file_pdf') }} <span class="text-danger">*</span>
-                            </label>
-                            <input type="file" class="form-control" id="file" name="file" accept=".pdf" required>
-                            <div class="form-text">{{ t('pdf_only') }}</div>
-                        </div>
-                        
-                        <!-- Auteur caché (automatiquement l'utilisateur connecté) -->
-                        <input type="hidden" name="user_id" value="{{ current_user.id }}">
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            {{ t('cancel') }}
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i> {{ t('add') }}
-                        </button>
-                    </div>
-                </form>
-            </div>
         </div>
-    </div>
+    {% endif %}
 
-    <!-- JavaScript pour afficher/cacher les champs selon le type -->
+    <!-- Modal Ajouter Document -->
     <script>
-        function toggleDocumentTypeFields() {
-            const docTypeSelect = document.getElementById('doc_type');
-            const selectedType = docTypeSelect.value;
+        function openAddDocumentModal() {
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            const modalFooter = document.getElementById('modal-footer');
             
-            // Hide all type field groups
-            const allFieldGroups = document.querySelectorAll('.document-type-fields');
-            allFieldGroups.forEach(function(group) {
-                group.style.display = 'none';
-            });
+            modalTitle.textContent = 'Ajouter un document';
             
-            // Show the selected type's fields
-            if (selectedType) {
-                const selectedGroup = document.getElementById('attrs_' + selectedType);
-                if (selectedGroup) {
-                    selectedGroup.style.display = 'block';
-                }
-            }
+            modalBody.innerHTML = `
+                <form method="POST" action="{{ url_for('add_document') }}" enctype="multipart/form-data" id="addDocForm">
+                    <div class="form-group">
+                        <label for="modal_title">Titre <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="modal_title" name="title" 
+                               placeholder="Titre du document" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modal_content">Contenu (optionnel)</label>
+                        <textarea class="form-control textarea-control" id="modal_content" name="content" 
+                                  placeholder="Description ou contenu du document..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modal_doc_type">Type de document <span class="text-danger">*</span></label>
+                        <select class="form-control select-control" id="modal_doc_type" name="doc_type" required onchange="toggleDocumentTypeFields()">
+                            <option value="">Sélectionnez un type</option>
+                            {% for type_id, type_config in document_types.items() %}
+                                <option value="{{ type_id }}">{{ type_config.name }} - {{ type_config.description }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modal_validity_date">Date de validité</label>
+                        <input type="date" class="form-control" id="modal_validity_date" name="validity_date">
+                    </div>
+                    
+                    <!-- Dynamic fields for document type attributes -->
+                    <div id="dynamic_attributes_container" class="mb-md"></div>
+                    
+                    <div class="form-group">
+                        <label for="modal_file">Fichier PDF <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="modal_file" name="file" accept=".pdf" required>
+                        <div class="form-text text-sm text-secondary">PDF uniquement</div>
+                    </div>
+                    
+                    <input type="hidden" name="user_id" value="{{ current_user.id }}">
+                </form>
+            `;
+            
+            modalFooter.innerHTML = `
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button type="submit" class="btn btn-primary" form="addDocForm">
+                    <i class="fas fa-check"></i> Ajouter
+                </button>
+            `;
+            
+            document.getElementById('modal').style.display = 'flex';
+            
+            // Initialize dynamic fields
+            toggleDocumentTypeFields();
         }
         
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const docTypeSelect = document.getElementById('doc_type');
+        function toggleDocumentTypeFields() {
+            const select = document.getElementById('modal_doc_type');
+            const container = document.getElementById('dynamic_attributes_container');
+            const selectedType = select ? select.value : '';
             
-            // Ajouter event listener pour le changement de type
-            if (docTypeSelect) {
-                docTypeSelect.addEventListener('change', toggleDocumentTypeFields);
-                
-                // Afficher les champs pour le type pré-sélectionné
-                if (docTypeSelect.value) {
-                    toggleDocumentTypeFields();
-                }
+            if (!selectedType) {
+                container.innerHTML = '';
+                return;
             }
-        });
+            
+            const typeConfig = {{ document_types|tojson }}[selectedType];
+            if (!typeConfig || !typeConfig.attributes) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '<div class="form-group"><label>Attributs spécifiques</label>';
+            
+            for (const [attrName, attrConfig] of Object.entries(typeConfig.attributes)) {
+                const required = attrConfig.required ? '<span class="text-danger">*</span>' : '';
+                const fieldId = 'modal_attr_' + attrName;
+                
+                html += `
+                    <div class="mb-sm">
+                        <label for="${fieldId}">${attrConfig.label} ${required}</label>
+                `;
+                
+                if (attrConfig.form_type === 'textarea') {
+                    html += `
+                        <textarea class="form-control textarea-control" id="${fieldId}" 
+                                  name="doc_attr_${attrName}" ${attrConfig.required ? 'required' : ''}>
+                        </textarea>
+                    `;
+                } else if (attrConfig.form_type === 'date') {
+                    html += `
+                        <input type="date" class="form-control" id="${fieldId}" 
+                               name="doc_attr_${attrName}" ${attrConfig.required ? 'required' : ''}>
+                    `;
+                } else if (attrConfig.form_type === 'number') {
+                    html += `
+                        <input type="number" class="form-control" id="${fieldId}" 
+                               name="doc_attr_${attrName}" ${attrConfig.required ? 'required' : ''}>
+                    `;
+                } else {
+                    html += `
+                        <input type="text" class="form-control" id="${fieldId}" 
+                               name="doc_attr_${attrName}" 
+                               placeholder="${attrConfig.label}" ${attrConfig.required ? 'required' : ''}>
+                    `;
+                }
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
     </script>
 {% endblock %}

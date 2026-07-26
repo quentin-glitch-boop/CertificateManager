@@ -1,43 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}{{ t('user_management') }} - {{ t('doc_manager') }}{% endblock %}
-
-{% block page_title %}{{ t('user_management') }}{% endblock %}
+{% block title %}Gestion des Utilisateurs - CertiFlow{% endblock %}
+{% block breadcrumb_title %}Utilisateurs{% endblock %}
 
 {% block content %}
     <!-- Messages flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">
+                    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }}"></i>
+                    <span>{{ message }}</span>
                 </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
-    
-    <div class="d-flex justify-content-between align-items-center mb-4">
+
+    <div class="flex justify-between items-center mb-lg">
         <h2 class="m-0">
-            <i class="bi bi-people me-2"></i>
-            {{ t('users') }}
+            <i class="fas fa-users me-md"></i>
+            Gestion des Utilisateurs
         </h2>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-            <i class="bi bi-plus-lg me-1"></i> {{ t('add_user') }}
+        <button class="btn btn-primary" onclick="openAddUserModal()">
+            <i class="fas fa-plus"></i> Ajouter un utilisateur
         </button>
     </div>
-    
-    <div class="card mb-4">
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-table me-md"></i> Liste des utilisateurs</h3>
+        </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
+            <div class="table-container">
+                <table class="table">
                     <thead>
                         <tr>
-                            <th>{{ t('id') }}</th>
-                            <th>{{ t('username') }}</th>
-                            <th>{{ t('role') }}</th>
-                            <th>{{ t('created_at') }}</th>
-                            <th>{{ t('actions') }}</th>
+                            <th style="width: 60px;">ID</th>
+                            <th>Nom d'utilisateur</th>
+                            <th style="width: 120px;">Rôle</th>
+                            <th style="width: 180px;">Date de création</th>
+                            <th style="width: 150px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -45,30 +47,32 @@
                             <tr>
                                 <td>{{ user.id }}</td>
                                 <td>
-                                    <span class="user-avatar user-avatar-sm me-2">
-                                        {{ user.username[:1].upper() }}
-                                    </span>
-                                    {{ user.username }}
+                                    <div class="flex items-center gap-sm">
+                                        <div class="user-avatar user-avatar-sm" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                            {{ user.username[:1].upper() }}
+                                        </div>
+                                        <span>{{ user.username }}</span>
+                                    </div>
                                 </td>
                                 <td>
-                                    <span class="badge {% if user.role == 'admin' %}role-admin{% else %}role-user{% endif %}">
+                                    <span class="badge {% if user.role == 'admin' %}badge-danger{% else %}badge-success{% endif %}">
                                         {{ user.role.upper() }}
                                     </span>
                                 </td>
-                                <td>{{ user.created_at if user.created_at else t('n_a') }}</td>
+                                <td>{{ (user.created_at|string)[:10] if user.created_at else 'N/A' }}</td>
                                 <td>
                                     {% if current_user.id != user.id %}
                                         <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" 
-                                           class="btn btn-sm btn-outline-primary me-2">
-                                            <i class="bi bi-pencil me-1"></i> {{ t('edit') }}
+                                           class="btn btn-sm btn-secondary">
+                                            <i class="fas fa-edit"></i>
                                         </a>
                                         <a href="{{ url_for('admin_delete_user', user_id=user.id) }}" 
-                                           class="btn btn-sm btn-outline-danger"
-                                           onclick="return confirm('{{ t('are_you_sure') }}')">
-                                            <i class="bi bi-trash me-1"></i> {{ t('delete') }}
+                                           class="btn btn-sm btn-danger" 
+                                           onclick="return confirm('Etes-vous sûr de vouloir supprimer cet utilisateur ?')">
+                                            <i class="fas fa-trash"></i>
                                         </a>
                                     {% else %}
-                                        <span class="text-muted small">({{ t('you')|default('Vous') }})</span>
+                                        <span class="badge badge-primary">Vous</span>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -78,122 +82,57 @@
             </div>
         </div>
     </div>
-    
-    <!-- Modal Ajouter/Modifier Utilisateur -->
-    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addUserModalLabel">
-                        <i class="bi bi-person-plus me-2"></i>
-                        {{ t('add_user') }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form method="POST" action="{{ url_for('admin_add_user') }}">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">
-                                {{ t('username') }} <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control" id="username" name="username" 
-                                   placeholder="{{ t('enter_username') }}..." required autofocus>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="password" class="form-label">
-                                {{ t('password') }} <span class="text-danger">*</span>
-                            </label>
-                            <input type="password" class="form-control" id="password" name="password" 
-                                   placeholder="{{ t('enter_password') }}..." required>
-                            <div class="form-text">{{ t('password_min_length')|default('Password must be at least 6 characters') }}</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="role" class="form-label">{{ t('role') }}</label>
-                            <select class="form-select" id="role" name="role">
-                                <option value="user" selected>{{ t('user') }}</option>
-                                <option value="admin">{{ t('admin') }}</option>
-                            </select>
-                            <div class="form-text">{{ t('admin_description')|default('Admins can manage users') }}</div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            {{ t('cancel') }}
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i> {{ t('add') }}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal Modifier Utilisateur (sera rempli par JavaScript si besoin) -->
-    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editUserModalLabel">
-                        <i class="bi bi-pencil me-2"></i>
-                        {{ t('edit_user') }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form method="POST" action="">
-                    <input type="hidden" name="user_id" id="edit_user_id">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="edit_username" class="form-label">{{ t('username') }}</label>
-                            <input type="text" class="form-control" id="edit_username" name="username" 
-                                   placeholder="{{ t('enter_username') }}..." required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="edit_password" class="form-label">{{ t('new_password')|default('New password') }} {{ t('optional') }}</label>
-                            <input type="password" class="form-control" id="edit_password" name="password" 
-                                   placeholder="{{ t('leave_empty')|default('Leave empty to keep current') }}">
-                            <div class="form-text">{{ t('leave_empty_keep')|default('Leave empty to keep current password') }}</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="edit_role" class="form-label">{{ t('role') }}</label>
-                            <select class="form-select" id="edit_role" name="role">
-                                <option value="user">{{ t('user') }}</option>
-                                <option value="admin">{{ t('admin') }}</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            {{ t('cancel') }}
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i> {{ t('save') }}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
+
     <script>
-        // Script pour gérer l'édition des utilisateurs
-        document.addEventListener('DOMContentLoaded', function() {
-            // Récupérer les liens d'édition et configurer le modal
-            const editLinks = document.querySelectorAll('a[href*="admin_edit_user"]');
-            editLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const userId = this.href.split('/').pop();
+        function openAddUserModal() {
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            const modalFooter = document.getElementById('modal-footer');
+            
+            modalTitle.textContent = 'Ajouter un utilisateur';
+            
+            modalBody.innerHTML = `
+                <form method="POST" action="{{ url_for('admin_add_user') }}" id="addUserForm">
+                    <div class="form-group">
+                        <label for="modal_username">Nom d'utilisateur <span class="text-danger">*</span></label>
+                        <div class="input-icon">
+                            <i class="fas fa-user"></i>
+                            <input type="text" class="form-control" id="modal_username" name="username" 
+                                   placeholder="Nom d'utilisateur" required autofocus>
+                        </div>
+                    </div>
                     
-                    // Pour une implémentation complète, on pourrait faire une requête AJAX
-                    // Pour l'instant, on redirige vers la page d'édition
-                    window.location.href = this.href;
-                });
-            });
-        });
+                    <div class="form-group">
+                        <label for="modal_password">Mot de passe <span class="text-danger">*</span></label>
+                        <div class="input-icon">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" class="form-control" id="modal_password" name="password" 
+                                   placeholder="Mot de passe" required>
+                        </div>
+                        <div class="form-text text-sm text-secondary">Le mot de passe doit contenir au moins 6 caractères</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modal_role">Rôle</label>
+                        <select class="form-control select-control" id="modal_role" name="role">
+                            <option value="user" selected>Utilisateur</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
+                        <div class="form-text text-sm text-secondary">Les administrateurs peuvent gérer les utilisateurs et tous les documents</div>
+                    </div>
+                </form>
+            `;
+            
+            modalFooter.innerHTML = `
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button type="submit" class="btn btn-primary" form="addUserForm">
+                    <i class="fas fa-check"></i> Ajouter
+                </button>
+            `;
+            
+            document.getElementById('modal').style.display = 'flex';
+        }
     </script>
 {% endblock %}

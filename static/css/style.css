@@ -369,13 +369,13 @@ img {
 
 .main-content {
     flex: 1;
-    margin-left: 0;
+    margin-left: 60px;
     padding-top: var(--topbar-height);
     min-height: 100vh;
     transition: var(--transition);
 }
 
-/* When sidebar is not collapsed, add margin to main content */
+/* When sidebar is expanded, increase margin to accommodate full width */
 .sidebar:not(.collapsed) ~ .main-content {
     margin-left: var(--sidebar-width);
 }

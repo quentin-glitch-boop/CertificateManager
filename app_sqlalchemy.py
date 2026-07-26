@@ -963,6 +963,11 @@ def inject_global_vars():
         }
 
 
+@app.route("/health")
+def health():
+    """Health check endpoint for Railway"""
+    return "OK", 200
+
 @app.route("/")
 @login_required
 def index():

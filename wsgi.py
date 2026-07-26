@@ -6,6 +6,7 @@ import os
 import time
 from app_sqlalchemy import app, db, init_db
 
+
 # Ensure upload folder exists
 def ensure_upload_folder():
     """Create upload folder if it doesn't exist"""
@@ -15,11 +16,12 @@ def ensure_upload_folder():
     except Exception as e:
         print(f"Warning: Could not create upload folder: {e}")
 
+
 # Initialize database on startup
 with app.app_context():
     max_retries = 5
     retry_count = 0
-    
+
     while retry_count < max_retries:
         try:
             print(f"[{retry_count + 1}/{max_retries}] Attempting to initialize database...")
@@ -37,8 +39,10 @@ with app.app_context():
                 print("✗ Failed to initialize database after all retries")
                 raise
 
+
 # Ensure upload folder exists
 ensure_upload_folder()
+
 
 # Export the app for Gunicorn
 app = app

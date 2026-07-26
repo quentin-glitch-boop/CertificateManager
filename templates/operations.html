@@ -262,11 +262,24 @@
             gridInstance = GridStack.init({float:true,cellHeight:'70px',minRow:1,acceptWidgets:true,removeTimeout:100,oneColumnMode:'mobile',margin:10});
             if(gridInstance) gridInstance.setStatic(true);
             
-            // Add widgets with content option
-            const statsItem = gridInstance.addWidget({id:'stats', content: createStatsWidget(), w:4, h:3, x:0, y:0});
-            const timelineItem = gridInstance.addWidget({id:'timeline', content: createTimelineWidget(), w:8, h:4, x:4, y:0});
-            const mapItem = gridInstance.addWidget({id:'map', content: createMapWidget(), w:6, h:5, x:0, y:4});
-            const dataItem = gridInstance.addWidget({id:'data', content: createDataWidget(), w:6, h:5, x:6, y:4});
+            // Create DOM elements for widgets
+            const statsEl = document.createElement('div');
+            statsEl.innerHTML = createStatsWidget();
+            
+            const timelineEl = document.createElement('div');
+            timelineEl.innerHTML = createTimelineWidget();
+            
+            const mapEl = document.createElement('div');
+            mapEl.innerHTML = createMapWidget();
+            
+            const dataEl = document.createElement('div');
+            dataEl.innerHTML = createDataWidget();
+            
+            // Add widgets to GridStack
+            const statsItem = gridInstance.addWidget({id:'stats', el: statsEl, w:4, h:3, x:0, y:0});
+            const timelineItem = gridInstance.addWidget({id:'timeline', el: timelineEl, w:8, h:4, x:4, y:0});
+            const mapItem = gridInstance.addWidget({id:'map', el: mapEl, w:6, h:5, x:0, y:4});
+            const dataItem = gridInstance.addWidget({id:'data', el: dataEl, w:6, h:5, x:6, y:4});
             
             // Refresh content
             if(statsItem) refreshWidgetContent(statsItem.el);

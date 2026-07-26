@@ -1504,12 +1504,23 @@ def operations_dashboard():
     # Récupérer les infos des widgets disponibles
     widgets_info = DASHBOARD_WIDGETS
 
+    # Créer un token JWT pour les appels API depuis le frontend
+    from app_sqlalchemy import create_jwt_token
+    user_obj = User(
+        id=current_user.id,
+        username=current_user.username,
+        password_hash=current_user.password_hash,
+        role=current_user.role,
+    )
+    jwt_token = create_jwt_token(user_obj)
+
     return render_template(
         "operations.html",
         config=config,
         user_configs=user_configs,
         widgets=widgets_info,
         current_user=current_user,
+        jwt_token=jwt_token,
     )
 
 

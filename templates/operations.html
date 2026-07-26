@@ -315,6 +315,20 @@
     <div class="grid-stack"></div>
     
     <script>
+        // JWT token for API calls
+        const jwtToken = '{{ jwt_token }}';
+        
+        // Helper function for authorized API calls
+        function apiFetch(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Authorization': `Bearer ${jwtToken}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+            return fetch(url, { ...defaultOptions, ...options });
+        }
+        
         let editMode = false;
         let originalGridData = [];
         
@@ -399,11 +413,8 @@
                 widgets[widgetId] = { enabled: true, params: {} };
             });
             
-            fetch('{{ url_for("api_save_dashboard_config") }}', {
+            apiFetch('{{ url_for("api_save_dashboard_config") }}', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({ 
                     config_name: 'default',
                     layout: layout,
@@ -434,7 +445,7 @@
             }
             
             // Load saved configuration
-            fetch('{{ url_for("api_get_dashboard_config") }}')
+            apiFetch('{{ url_for("api_get_dashboard_config") }}')
                 .then(response => response.json())
                 .then(data => {
                     // Clear any existing widgets
@@ -631,7 +642,7 @@
         }
         
         function refreshStatsWidget(widgetEl) {
-            fetch('{{ url_for("api_get_documents") }}')
+            apiFetch('{{ url_for("api_get_documents") }}')
                 .then(response => response.json())
                 .then(data => {
                     const documents = data.documents || data;
@@ -652,7 +663,7 @@
         }
         
         function refreshTimelineWidget(widgetEl) {
-            fetch('{{ url_for("api_get_documents") }}')
+            apiFetch('{{ url_for("api_get_documents") }}')
                 .then(response => response.json())
                 .then(data => {
                     // Extract documents array
@@ -733,7 +744,7 @@
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
             
-            fetch('{{ url_for("api_get_documents") }}')
+            apiFetch('{{ url_for("api_get_documents") }}')
                 .then(response => response.json())
                 .then(data => {
                     // Site coordinates mapping based on site name from attributes
@@ -778,7 +789,7 @@
         }
         
         function refreshDataWidget(widgetEl) {
-            fetch('{{ url_for("api_get_documents") }}')
+            apiFetch('{{ url_for("api_get_documents") }}')
                 .then(response => response.json())
                 .then(data => {
                     const documents = data.documents || data;

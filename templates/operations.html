@@ -48,6 +48,16 @@
         padding: 0;
     }
     
+    .grid-stack-item .gridstack-resize-handle {
+        background: var(--primary);
+        border-radius: 0 0 var(--border-radius) 0;
+        opacity: 0.5;
+    }
+    
+    .grid-stack-item .gridstack-resize-handle:hover {
+        opacity: 1;
+    }
+    
     .grid-stack-item {
         background: var(--card-bg);
         border: 1px solid var(--border-light);
@@ -327,10 +337,9 @@
                     item.classList.add('edit-mode');
                 });
                 
-                // Enable widget controls
+                // Enable widget controls for GridStack v7
                 if (grid) {
-                    grid.moveEnabled = true;
-                    grid.resizeEnabled = true;
+                    grid.setStatic(false);
                 }
                 
             } else {
@@ -345,10 +354,9 @@
                     item.classList.remove('edit-mode');
                 });
                 
-                // Disable widget controls
+                // Disable widget controls for GridStack v7
                 if (grid) {
-                    grid.moveEnabled = false;
-                    grid.resizeEnabled = false;
+                    grid.setStatic(true);
                 }
             }
         }
@@ -363,12 +371,44 @@
             const grid = GridStack.getGridByNode(document.querySelector('.grid-stack'));
             const gridData = grid.save(false);
             
+            // Map to layout format for backend
+            const layout = gridData.map(item => {
+                // Extract widget ID from content's data-widget-id attribute
+                let widgetId = item.id || `widget_${item.x}_${item.y}`;
+                const contentEl = item.el.querySelector('[data-widget-id]');
+                if (contentEl) {
+                    widgetId = contentEl.getAttribute('data-widget-id');
+                }
+                return {
+                    widget_id: widgetId,
+                    x: item.x,
+                    y: item.y,
+                    w: item.w,
+                    h: item.h
+                };
+            });
+            
+            // Extract widget info
+            const widgets = {};
+            gridData.forEach(item => {
+                let widgetId = item.id || `widget_${item.x}_${item.y}`;
+                const contentEl = item.el.querySelector('[data-widget-id]');
+                if (contentEl) {
+                    widgetId = contentEl.getAttribute('data-widget-id');
+                }
+                widgets[widgetId] = { enabled: true, params: {} };
+            });
+            
             fetch('{{ url_for("api_save_dashboard_config") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ grid_data: gridData })
+                body: JSON.stringify({ 
+                    config_name: 'default',
+                    layout: layout,
+                    widgets: widgets
+                })
             }).then(response => {
                 if (response.ok) {
                     toggleEditMode();
@@ -390,48 +430,68 @@
             
             // Disable move/resize by default
             if (grid) {
-                grid.moveEnabled = false;
-                grid.resizeEnabled = false;
+                grid.setStatic(true);
             }
             
             // Load saved configuration
             fetch('{{ url_for("api_get_dashboard_config") }}')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.grid_data && data.grid_data.length > 0) {
-                        grid.load(data.grid_data);
+                    // Clear any existing widgets
+                    grid.removeAll(true);
+                    // Convert layout format from backend to GridStack format
+                    let gridData = [];
+                    if (data.layout && data.layout.length > 0) {
+                        // Map backend layout to GridStack widgets
+                        const widgetMap = {
+                            'stats': createStatsWidget(),
+                            'timeline': createTimelineWidget(),
+                            'map': createMapWidget(),
+                            'data': createDataWidget(),
+                            'alerts': createTimelineWidget() // fallback for alerts
+                        };
+                        gridData = data.layout.map(layoutItem => {
+                            const widgetId = layoutItem.widget_id;
+                            return {
+                                id: widgetId,
+                                content: widgetMap[widgetId] || createStatsWidget(),
+                                w: layoutItem.w,
+                                h: layoutItem.h,
+                                x: layoutItem.x,
+                                y: layoutItem.y
+                            };
+                        });
                     } else {
                         // Default widgets
-                        const defaultWidgets = [
-                            { content: createStatsWidget(), w: 4, h: 3, x: 0, y: 0 },
-                            { content: createTimelineWidget(), w: 8, h: 4, x: 4, y: 0 },
-                            { content: createMapWidget(), w: 6, h: 5, x: 0, y: 3 },
-                            { content: createDataWidget(), w: 6, h: 5, x: 6, y: 4 }
+                        gridData = [
+                            { id: 'stats', content: createStatsWidget(), w: 4, h: 3, x: 0, y: 0 },
+                            { id: 'timeline', content: createTimelineWidget(), w: 8, h: 4, x: 4, y: 0 },
+                            { id: 'map', content: createMapWidget(), w: 6, h: 5, x: 0, y: 3 },
+                            { id: 'data', content: createDataWidget(), w: 6, h: 5, x: 6, y: 4 }
                         ];
-                        
-                        defaultWidgets.forEach((widget, index) => {
-                            const item = grid.addWidget(widget);
-                            item.el.addEventListener('click', function(e) {
-                                if (e.target.classList.contains('widget-action-btn') || 
-                                    e.target.closest('.widget-action-btn')) {
-                                    return;
-                                }
-                                refreshWidgetContent(item.el);
-                            });
-                        });
-                        
-                        // Save default layout
-                        saveDashboard();
                     }
+                    
+                    gridData.forEach((widget, index) => {
+                        const item = grid.addWidget(widget);
+                        item.el.addEventListener('click', function(e) {
+                            if (e.target.classList.contains('widget-action-btn') || 
+                                e.target.closest('.widget-action-btn')) {
+                                return;
+                            }
+                            refreshWidgetContent(item.el);
+                        });
+                    });
                 });
             
-            // Disable remove functionality
-            grid.enableRemove(false);
+            // Disable remove by default
+            if (grid) {
+                grid.setStatic(true);
+            }
         });
         
         function createStatsWidget() {
             return `
-                <div class="grid-stack-item-content">
+                <div class="grid-stack-item-content" data-widget-id="stats">
                     <div class="widget-header">
                         <div class="widget-title"><i class="fas fa-chart-bar"></i> Statistiques</div>
                         <div class="widget-actions">
@@ -471,7 +531,7 @@
         
         function createTimelineWidget() {
             return `
-                <div class="grid-stack-item-content widget-timeline">
+                <div class="grid-stack-item-content widget-timeline" data-widget-id="timeline">
                     <div class="widget-header">
                         <div class="widget-title"><i class="fas fa-calendar-alt"></i> Prochaines Expirations</div>
                         <div class="widget-actions">
@@ -496,7 +556,7 @@
         
         function createMapWidget() {
             return `
-                <div class="grid-stack-item-content widget-map">
+                <div class="grid-stack-item-content widget-map" data-widget-id="map">
                     <div class="widget-header">
                         <div class="widget-title"><i class="fas fa-map-marked-alt"></i> Cartographie</div>
                         <div class="widget-actions">
@@ -519,7 +579,7 @@
         
         function createDataWidget() {
             return `
-                <div class="grid-stack-item-content">
+                <div class="grid-stack-item-content" data-widget-id="data">
                     <div class="widget-header">
                         <div class="widget-title"><i class="fas fa-table"></i> Derniers Documents</div>
                         <div class="widget-actions">
@@ -590,23 +650,26 @@
             fetch('{{ url_for("api_get_documents") }}')
                 .then(response => response.json())
                 .then(data => {
+                    // Extract documents array
+                    const documents = data.documents || data;
                     const timelineEl = widgetEl.querySelector('#timeline-content');
                     const now = new Date();
                     const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
                     
                     // Filter documents expiring in the next 30 days
-                    const expiringSoon = data.filter(d => d.validity_date && 
+                    const expiringSoon = documents.filter(d => d.validity_date && 
                         new Date(d.validity_date) >= now && 
                         new Date(d.validity_date) <= thirtyDaysFromNow)
                         .sort((a, b) => new Date(a.validity_date) - new Date(b.validity_date));
                     
-                    const alreadyExpired = data.filter(d => d.validity_date && new Date(d.validity_date) < now)
+                    const alreadyExpired = documents.filter(d => d.validity_date && new Date(d.validity_date) < now)
                         .sort((a, b) => new Date(b.validity_date) - new Date(a.validity_date));
                     
                     let html = '';
                     
                     // Already expired
                     alreadyExpired.slice(0, 3).forEach(doc => {
+                        const author = doc.author || doc.username || 'Inconnu';
                         html += `
                             <div class="timeline-item">
                                 <div class="timeline-date">
@@ -615,7 +678,7 @@
                                 </div>
                                 <div class="timeline-content">
                                     <div class="timeline-document">${doc.title}</div>
-                                    <div class="text-sm text-secondary">Auteur: ${doc.username}</div>
+                                    <div class="text-sm text-secondary">Auteur: ${author}</div>
                                     <span class="timeline-status status-expired">Expiré</span>
                                 </div>
                             </div>
@@ -627,6 +690,7 @@
                         const daysLeft = Math.ceil((new Date(doc.validity_date) - now) / (1000 * 60 * 60 * 24));
                         const statusClass = daysLeft <= 7 ? 'status-expiring' : 'status-valid';
                         const statusText = daysLeft <= 7 ? 'Expirant bientôt' : 'Valide';
+                        const author = doc.author || doc.username || 'Inconnu';
                         
                         html += `
                             <div class="timeline-item">
@@ -636,7 +700,7 @@
                                 </div>
                                 <div class="timeline-content">
                                     <div class="timeline-document">${doc.title}</div>
-                                    <div class="text-sm text-secondary">Auteur: ${doc.username}</div>
+                                    <div class="text-sm text-secondary">Auteur: ${author}</div>
                                     <span class="timeline-status ${statusClass}">${statusText}</span>
                                 </div>
                             </div>
@@ -667,15 +731,33 @@
             fetch('{{ url_for("api_get_documents") }}')
                 .then(response => response.json())
                 .then(data => {
+                    // Site coordinates mapping based on site name from attributes
                     const siteCoordinates = {
-                        'Lonza Bornem': [51.2000, 4.3000],
+                        'Besancon': [47.2378, 6.0241],
+                        'Ashland': [37.1347, -84.8850],
+                        'Lyon': [45.7640, 4.8357],
+                        'Bornem': [51.2000, 4.3000],
+                        'Merck': [40.7589, -73.9851],
+                        'Vervier': [50.5833, 5.8500],
+                        'Visp': [46.3167, 7.8833],
+                        'Thermofisher': [42.3601, -71.0589],
                         'Lonza Colmar': [48.0800, 7.3500],
+                        'Lonza Bornem': [51.2000, 4.3000],
                         'Default': [46.603354, 1.888334]
                     };
                     
-                    data.forEach(doc => {
-                        const coord = siteCoordinates[doc.username] || siteCoordinates['Default'];
+                    data.documents.forEach(doc => {
+                        // Extract site from attributes
+                        let site = 'Default';
+                        if (doc.attributes && doc.attributes.site) {
+                            site = doc.attributes.site;
+                        } else if (doc.attributes && doc.attributes.societe_certifiee) {
+                            site = doc.attributes.societe_certifiee;
+                        }
+                        
+                        const coord = siteCoordinates[site] || siteCoordinates['Default'];
                         const isValid = !doc.validity_date || new Date(doc.validity_date) >= new Date();
+                        const author = doc.author || doc.username || 'Inconnu';
                         const icon = L.divIcon({
                             className: 'map-marker',
                             html: `<i class="fas fa-${isValid ? 'check-circle' : 'exclamation-circle'} text-${isValid ? 'success' : 'danger'}" style="font-size: 20px;"></i>`,
@@ -683,7 +765,7 @@
                         });
                         
                         L.marker(coord, { icon: icon }).addTo(map)
-                            .bindPopup(`<b>${doc.title}</b><br>Auteur: ${doc.username}<br>Statut: ${isValid ? 'Valide' : 'Expiré'}`);
+                            .bindPopup(`<b>${doc.title}</b><br>Auteur: ${author}<br>Site: ${site}<br>Statut: ${isValid ? 'Valide' : 'Expiré'}`);
                     });
                 });
             
@@ -694,14 +776,16 @@
             fetch('{{ url_for("api_get_documents") }}')
                 .then(response => response.json())
                 .then(data => {
+                    const documents = data.documents || data;
                     const tbody = widgetEl.querySelector('#data-table-body');
-                    const latestDocs = data.sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date)).slice(0, 5);
+                    const latestDocs = documents.sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date)).slice(0, 5);
                     
                     let html = '';
                     latestDocs.forEach(doc => {
                         const isValid = !doc.validity_date || new Date(doc.validity_date) >= new Date();
                         const statusClass = isValid ? 'status-valid' : 'status-expired';
                         const statusText = isValid ? 'Valide' : 'Expiré';
+                        const author = doc.author || doc.username || 'Inconnu';
                         
                         html += `
                             <tr>
@@ -709,7 +793,7 @@
                                     ${doc.title}
                                 </td>
                                 <td>${doc.type || 'N/A'}</td>
-                                <td>${doc.username}</td>
+                                <td>${author}</td>
                                 <td><span class="status-dot ${statusClass}"></span> ${statusText}</td>
                             </tr>
                         `;
@@ -732,7 +816,7 @@
         function removeWidget(btn) {
             const grid = GridStack.getGridByNode(document.querySelector('.grid-stack'));
             const widgetEl = btn.closest('.grid-stack-item');
-            grid.removeWidget(widgetEl, false);
+            grid.remove(widgetEl, false);
         }
         
         // Load all widgets on page load

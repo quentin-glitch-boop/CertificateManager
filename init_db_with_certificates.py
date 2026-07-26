@@ -16,6 +16,7 @@ Utilisation:
 import os
 import sys
 import shutil
+import json
 from datetime import datetime, date, timedelta
 
 # Chemin du répertoire courant (où se trouve ce script)
@@ -204,7 +205,13 @@ def init_db():
         for doc_data in documents_data:
             existing = DocumentDB.query.filter_by(title=doc_data['title']).first()
             if not existing:
-                doc = DocumentDB(**doc_data)
+                # Convertir attributes dict en JSON string
+                if 'attributes' in doc_data and isinstance(doc_data['attributes'], dict):
+                    doc_data_copy = doc_data.copy()
+                    doc_data_copy['attributes'] = json.dumps(doc_data['attributes'], ensure_ascii=False)
+                else:
+                    doc_data_copy = doc_data
+                doc = DocumentDB(**doc_data_copy)
                 db.session.add(doc)
         
         db.session.commit()
@@ -219,6 +226,9 @@ def clean_db():
     from app_sqlalchemy import app, db, DocumentDB, UserDB
     
     with app.app_context():
+        # Créer les tables si elles n'existent pas
+        db.create_all()
+        
         # Effacer tous les documents
         db.session.query(DocumentDB).delete()
         

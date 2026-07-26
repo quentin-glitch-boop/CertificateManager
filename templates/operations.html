@@ -28,50 +28,37 @@
         margin-bottom: var(--spacing-lg);
     }
     
-    .btn-toggle-edit {
-        background: var(--background);
-        border: 1px solid var(--border-light);
-        color: var(--text-primary);
-    }
-    
-    .btn-toggle-edit:hover {
-        background: var(--border-light);
-    }
-    
     .btn-customize {
         background: var(--primary);
         color: white;
     }
     
-    .grid-stack {
-        background: transparent;
-        padding: 0;
+    /* Simple dashboard grid layout */
+    .dashboard-grid {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-lg);
     }
     
-    .grid-stack-item .gridstack-resize-handle {
-        background: var(--primary);
-        border-radius: 0 0 var(--border-radius) 0;
-        opacity: 0.5;
+    .dashboard-row {
+        display: flex;
+        gap: var(--spacing-lg);
     }
     
-    .grid-stack-item .gridstack-resize-handle:hover {
-        opacity: 1;
-    }
-    
-    .grid-stack-item {
+    .widget-container {
+        flex: 1;
+        min-width: 0;
         background: var(--card-bg);
         border: 1px solid var(--border-light);
         border-radius: var(--border-radius);
         box-shadow: var(--shadow-sm);
-        transition: var(--transition);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
     
-    .grid-stack-item:hover {
+    .widget-container:hover {
         box-shadow: var(--shadow-md);
-    }
-    
-    .grid-stack-item.active {
-        box-shadow: 0 0 0 2px var(--primary) inset;
     }
     
     .grid-stack-item-content {
@@ -79,6 +66,7 @@
         height: 100%;
         display: flex;
         flex-direction: column;
+        flex: 1;
     }
     
     .widget-header {
@@ -312,7 +300,17 @@
         </button>
     </div>
     
-    <div class="grid-stack"></div>
+    <!-- Simple dashboard grid without GridStack -->
+    <div class="dashboard-grid">
+        <div class="dashboard-row">
+            <div class="widget-container" id="widget-stats"></div>
+            <div class="widget-container" id="widget-timeline"></div>
+        </div>
+        <div class="dashboard-row">
+            <div class="widget-container" id="widget-map"></div>
+            <div class="widget-container" id="widget-data"></div>
+        </div>
+    </div>
     
     <script>
         // JWT token for API calls
@@ -330,171 +328,60 @@
         }
         
         let editMode = false;
-        let originalGridData = [];
-        let gridInstance = null;
         
         function toggleEditMode() {
             editMode = !editMode;
-            const grid = gridInstance || GridStack.getGridByNode(document.querySelector('.grid-stack'));
             const sidebar = document.querySelector('.sidebar');
             
             if (editMode) {
-                // Enter edit mode
                 if (sidebar) {
                     sidebar.style.zIndex = '1040';
                 }
                 document.getElementById('edit-mode-text').textContent = 'Terminer';
                 document.getElementById('btn-save').style.display = 'inline-flex';
                 document.getElementById('btn-cancel').style.display = 'inline-flex';
-                
-                // Save current grid state for cancel
-                if (grid) {
-                    originalGridData = grid.save(false);
-                }
-                
-                // Add edit class to all items
-                document.querySelectorAll('.grid-stack-item').forEach(item => {
-                    item.classList.add('edit-mode');
+                document.querySelectorAll('.widget-edit-actions').forEach(el => {
+                    el.style.display = 'block';
                 });
-                
-                // Enable widget controls for GridStack v7
-                if (grid) {
-                    grid.setStatic(false);
-                }
-                
             } else {
-                // Exit edit mode
                 if (sidebar) {
                     sidebar.style.zIndex = '';
                 }
                 document.getElementById('edit-mode-text').textContent = 'Personnaliser';
                 document.getElementById('btn-save').style.display = 'none';
                 document.getElementById('btn-cancel').style.display = 'none';
-                
-                // Remove edit class
-                document.querySelectorAll('.grid-stack-item').forEach(item => {
-                    item.classList.remove('edit-mode');
+                document.querySelectorAll('.widget-edit-actions').forEach(el => {
+                    el.style.display = 'none';
                 });
-                
-                // Disable widget controls for GridStack v7
-                if (grid) {
-                    grid.setStatic(true);
-                }
             }
         }
         
         function cancelEdit() {
-            const grid = gridInstance || GridStack.getGridByNode(document.querySelector('.grid-stack'));
-            if (grid) {
-                grid.load(originalGridData);
-            }
             toggleEditMode();
         }
         
         function saveDashboard() {
-            const grid = gridInstance || GridStack.getGridByNode(document.querySelector('.grid-stack'));
-            if (!grid) return;
-            const gridData = grid.save(false);
-            
-            // Map to layout format for backend
-            const layout = gridData.map(item => {
-                // Extract widget ID from content's data-widget-id attribute
-                let widgetId = item.id || `widget_${item.x}_${item.y}`;
-                const contentEl = item.el.querySelector('[data-widget-id]');
-                if (contentEl) {
-                    widgetId = contentEl.getAttribute('data-widget-id');
-                }
-                return {
-                    widget_id: widgetId,
-                    x: item.x,
-                    y: item.y,
-                    w: item.w,
-                    h: item.h
-                };
-            });
-            
-            // Extract widget info
-            const widgets = {};
-            gridData.forEach(item => {
-                let widgetId = item.id || `widget_${item.x}_${item.y}`;
-                const contentEl = item.el.querySelector('[data-widget-id]');
-                if (contentEl) {
-                    widgetId = contentEl.getAttribute('data-widget-id');
-                }
-                widgets[widgetId] = { enabled: true, params: {} };
-            });
-            
-            apiFetch('{{ url_for("api_save_dashboard_config") }}', {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    config_name: 'default',
-                    layout: layout,
-                    widgets: widgets
-                })
-            }).then(response => {
-                if (response.ok) {
-                    toggleEditMode();
-                }
-            });
+            toggleEditMode();
         }
         
-        // Initialize dashboard
+        function removeWidget(btn) {
+            const widgetContainer = btn.closest('.widget-container');
+            if (widgetContainer) {
+                widgetContainer.remove();
+            }
+        }
+        
+        // Initialize dashboard with simple HTML insertion
         document.addEventListener('DOMContentLoaded', function() {
-            gridInstance = GridStack.init({
-                float: true,
-                cellHeight: '70px',
-                minRow: 1,
-                acceptWidgets: true,
-                removeTimeout: 100,
-                oneColumnMode: 'mobile',
-                margin: 10
-            });
+            document.getElementById('widget-stats').innerHTML = createStatsWidget();
+            document.getElementById('widget-timeline').innerHTML = createTimelineWidget();
+            document.getElementById('widget-map').innerHTML = createMapWidget();
+            document.getElementById('widget-data').innerHTML = createDataWidget();
             
-            // Disable move/resize by default
-            if (gridInstance) {
-                gridInstance.setStatic(true);
-            }
-            
-            // Define default widgets with non-overlapping positions
-            const defaultWidgets = [
-                { id: 'stats', content: createStatsWidget(), w: 4, h: 3, x: 0, y: 0 },
-                { id: 'timeline', content: createTimelineWidget(), w: 8, h: 4, x: 4, y: 0 },
-                { id: 'map', content: createMapWidget(), w: 6, h: 5, x: 0, y: 4 },
-                { id: 'data', content: createDataWidget(), w: 6, h: 5, x: 6, y: 4 }
-            ];
-            
-            // Load widgets immediately without waiting for API
-            defaultWidgets.forEach((widget) => {
-                const item = gridInstance.addWidget(widget);
-                
-                // Load widget content immediately
-                refreshWidgetContent(item.el);
-                
-                item.el.addEventListener('click', function(e) {
-                    if (e.target.classList.contains('widget-action-btn') || 
-                        e.target.closest('.widget-action-btn')) {
-                        return;
-                    }
-                    refreshWidgetContent(item.el);
-                });
-            });
-            
-            // Try to load saved configuration (optional - for future use)
-            apiFetch('{{ url_for("api_get_dashboard_config") }}')
-                .then(response => response.json())
-                .then(data => {
-                    // If we have a valid saved layout, we could apply it here
-                    // For now, just keep the default widgets
-                    console.log('Dashboard config loaded:', data);
-                })
-                .catch(error => {
-                    console.error('Error loading dashboard config:', error);
-                });
-            
-            // Disable remove by default
-            if (gridInstance) {
-                gridInstance.setStatic(true);
-            }
+            refreshWidgetContent(document.getElementById('widget-stats'));
+            refreshWidgetContent(document.getElementById('widget-timeline'));
+            refreshWidgetContent(document.getElementById('widget-map'));
+            refreshWidgetContent(document.getElementById('widget-data'));
         });
         
         function createStatsWidget() {
@@ -503,7 +390,7 @@
                     <div class="widget-header">
                         <div class="widget-title"><i class="fas fa-chart-bar"></i> Statistiques</div>
                         <div class="widget-actions">
-                            <button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.grid-stack-item'))">
+                            <button class="widget-action-btn" onclick="refreshWidgetContent(this.closest('.widget-container'))">
                                 <i class="fas fa-sync"></i> Rafraîchir
                             </button>
                         </div>

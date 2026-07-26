@@ -460,7 +460,9 @@
                 .then(response => response.json())
                 .then(data => {
                     // Clear any existing widgets
-                    grid.removeAll(true);
+                    if (gridInstance) {
+                        gridInstance.removeAll(true);
+                    }
                     // Convert layout format from backend to GridStack format
                     let gridData = [];
                     const widgetMap = {
@@ -536,7 +538,7 @@
                     }
                     
                     gridData.forEach((widget, index) => {
-                        const item = grid.addWidget(widget);
+                        const item = gridInstance.addWidget(widget);
                         
                         // Load widget content immediately
                         refreshWidgetContent(item.el);
@@ -552,8 +554,8 @@
                 });
             
             // Disable remove by default
-            if (grid) {
-                grid.setStatic(true);
+            if (gridInstance) {
+                gridInstance.setStatic(true);
             }
         });
         

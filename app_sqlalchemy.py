@@ -176,7 +176,7 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     """Load user from database using SQLAlchemy"""
-    user_db = UserDB.query.get(int(user_id))
+    user_db = db.session.get(UserDB, int(user_id))
     if user_db:
         return User(
             id=user_db.id,
@@ -920,8 +920,8 @@ def get_all_documents_for_user(user_id=None, user_role=None):
             "id": doc.id,
             "title": doc.title,
             "content": doc.content,
-            "upload_date": doc.upload_date,
-            "validity_date": doc.validity_date,
+            "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
+            "validity_date": str(doc.validity_date) if doc.validity_date else None,
             "file_path": doc.file_path,
             "type": doc.type,
             "attributes": attrs,
@@ -1022,13 +1022,23 @@ def index():
             attrs["_latitude"] = lat
             attrs["_longitude"] = lon
 
+        # Convert dates to strings for template compatibility
+        upload_date_str = doc.upload_date.isoformat() if doc.upload_date else None
+        validity_date_str = str(doc.validity_date) if doc.validity_date else None
+        
         docs_with_attrs.append({
-            **{col: getattr(doc, col) for col in ['id', 'title', 'content', 'upload_date', 'validity_date', 'file_path', 'type']},
+            "id": doc.id,
+            "title": doc.title,
+            "content": doc.content,
+            "upload_date": upload_date_str,
+            "validity_date": validity_date_str,
+            "file_path": doc.file_path,
+            "type": doc.type,
             "username": doc.owner.username,
             "attributes": attrs,
         })
 
-    return render_template("index.html", documents=docs_with_attrs, current_user=current_user)
+    return render_template("index.html", documents=docs_with_attrs, current_user=current_user, document_types=get_document_types(), current_date=date.today().isoformat())
 
 
 # Routes de login
@@ -1287,7 +1297,7 @@ def admin_add_user():
 @admin_required
 def admin_edit_user(user_id):
     """Modifier un utilisateur"""
-    user = UserDB.query.get(user_id)
+    user = db.session.get(UserDB, user_id)
 
     if not user:
         flash("Utilisateur non trouvé", "error")
@@ -1343,7 +1353,7 @@ def admin_delete_user(user_id):
         flash("Vous ne pouvez pas supprimer votre propre compte", "danger")
         return redirect(url_for("admin_users"))
 
-    user = UserDB.query.get(user_id)
+    user = db.session.get(UserDB, user_id)
     if not user:
         flash("Utilisateur non trouvé", "error")
         return redirect(url_for("admin_users"))
@@ -1377,7 +1387,7 @@ def admin_delete_user(user_id):
 @admin_required
 def admin_edit_user_page(user_id):
     """Page de modification d'utilisateur"""
-    user = UserDB.query.get(user_id)
+    user = db.session.get(UserDB, user_id)
 
     if not user:
         flash("Utilisateur non trouvé", "error")
@@ -1765,6 +1775,13 @@ def api_create_document():
                     attr_value = data.get(attr_name, "").strip()
                     attributes[attr_name] = attr_value
 
+        # Convert validity_date string to date object if needed
+        if validity_date and isinstance(validity_date, str):
+            try:
+                validity_date = datetime.strptime(validity_date, "%Y-%m-%d").date()
+            except:
+                validity_date = None
+
         # Create document using SQLAlchemy
         new_doc = DocumentDB(
             title=title,
@@ -1804,7 +1821,7 @@ def api_delete_document(doc_id):
     user_id = user_data["user_id"]
     user_role = user_data["role"]
 
-    doc = DocumentDB.query.get(doc_id)
+    doc = db.session.get(DocumentDB, doc_id)
 
     if not doc:
         return jsonify({"error": "Document not found"}), 404
@@ -1923,7 +1940,7 @@ def api_delete_user(user_id):
     if user_data["user_id"] == user_id:
         return jsonify({"error": "Cannot delete your own account"}), 400
 
-    user = UserDB.query.get(user_id)
+    user = db.session.get(UserDB, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 

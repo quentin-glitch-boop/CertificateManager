@@ -2,7 +2,7 @@ import pytest
 import os
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 # Add parent directory to path to import app
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,12 +60,12 @@ def client(app):
         db.session.add(user3)
         db.session.commit()
         
-        # Add test document
+        # Add test document - use date object, not string
         doc = DocumentDB(
             title="Test Document",
             content="Contenu de test",
             user_id=user1.id,
-            validity_date="2026-12-31",
+            validity_date=date(2026, 12, 31),  # Use date object
             file_path=None,
             type="certificat",
             attributes=None,

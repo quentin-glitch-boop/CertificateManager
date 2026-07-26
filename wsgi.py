@@ -1,9 +1,9 @@
 """
 WSGI entry point for Railway deployment.
 """
+
 import os
 import sys
-
 
 print("=== Starting WSGI ===", file=sys.stderr)
 print(f"PORT: {os.environ.get('PORT', 'not set')}", file=sys.stderr)
@@ -16,7 +16,7 @@ from app_sqlalchemy import app
 # Ensure upload folder exists
 def ensure_upload_folder():
     """Create upload folder if it doesn't exist"""
-    upload_folder = os.environ.get('UPLOAD_FOLDER', '/app/static/uploads')
+    upload_folder = os.environ.get("UPLOAD_FOLDER", "/app/static/uploads")
     try:
         os.makedirs(upload_folder, exist_ok=True)
     except Exception as e:

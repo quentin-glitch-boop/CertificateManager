@@ -48,8 +48,21 @@ from functools import wraps
 # ============================================================================
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (
-    text, and_, or_, func, Index, desc, asc, Date, DateTime, 
-    Boolean, Float, String, Text, Integer, ForeignKey
+    text,
+    and_,
+    or_,
+    func,
+    Index,
+    desc,
+    asc,
+    Date,
+    DateTime,
+    Boolean,
+    Float,
+    String,
+    Text,
+    Integer,
+    ForeignKey,
 )
 from sqlalchemy.orm import relationship
 
@@ -61,29 +74,36 @@ db = SQLAlchemy()
 # SQLAlchemy Models
 # ============================================================================
 
+
 class UserDB(db.Model):
     """SQLAlchemy model for users table"""
-    __tablename__ = 'users'
-    
+
+    __tablename__ = "users"
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(50), nullable=False, default='user')
+    role = db.Column(db.String(50), nullable=False, default="user")
     created_at = db.Column(db.DateTime, server_default=func.now())
-    
+
     # Relationships
-    documents = db.relationship('DocumentDB', backref='owner', lazy=True, cascade='all, delete-orphan')
-    dashboard_configs = db.relationship('DashboardConfigDB', backref='user', lazy=True, cascade='all, delete-orphan')
+    documents = db.relationship(
+        "DocumentDB", backref="owner", lazy=True, cascade="all, delete-orphan"
+    )
+    dashboard_configs = db.relationship(
+        "DashboardConfigDB", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
 
 
 class DocumentDB(db.Model):
     """SQLAlchemy model for documents table"""
-    __tablename__ = 'documents'
-    
+
+    __tablename__ = "documents"
+
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     content = db.Column(db.Text)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     upload_date = db.Column(db.DateTime, server_default=func.now())
     validity_date = db.Column(db.Date)
     file_path = db.Column(db.String(255))
@@ -93,36 +113,36 @@ class DocumentDB(db.Model):
 
 class DashboardConfigDB(db.Model):
     """SQLAlchemy model for user_dashboard_config table"""
-    __tablename__ = 'user_dashboard_config'
-    
+
+    __tablename__ = "user_dashboard_config"
+
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    config_name = db.Column(db.String(80), nullable=False, default='default')
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    config_name = db.Column(db.String(80), nullable=False, default="default")
     layout = db.Column(db.Text)
     widgets = db.Column(db.Text)
     is_default = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, server_default=func.now())
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
-    
+
     __table_args__ = (
-        db.UniqueConstraint('user_id', 'config_name', name='uq_user_config'),
+        db.UniqueConstraint("user_id", "config_name", name="uq_user_config"),
     )
 
 
 class GeocodeCacheDB(db.Model):
     """SQLAlchemy model for geocode_cache table"""
-    __tablename__ = 'geocode_cache'
-    
+
+    __tablename__ = "geocode_cache"
+
     id = db.Column(db.Integer, primary_key=True)
     address = db.Column(db.String(255), unique=True, nullable=False)
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     accessed_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
     created_at = db.Column(db.DateTime, server_default=func.now())
-    
-    __table_args__ = (
-        db.Index('idx_geocode_address', 'address'),
-    )
+
+    __table_args__ = (db.Index("idx_geocode_address", "address"),)
 
 
 # ============================================================================
@@ -131,23 +151,30 @@ class GeocodeCacheDB(db.Model):
 app = Flask(__name__)
 
 # Load secret key from environment or use default
-app.secret_key = os.environ.get('SECRET_KEY', 'ta_cle_secrete_ic123456_changez_la_en_production')
+app.secret_key = os.environ.get(
+    "SECRET_KEY", "ta_cle_secrete_ic123456_changez_la_en_production"
+)
 
 # Configure SQLAlchemy
-DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(os.path.dirname(__file__), 'documents.db'))
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "sqlite:///" + os.path.join(os.path.dirname(__file__), "documents.db"),
+)
 
 # Handle PostgreSQL URL format (Railway uses postgres://)
-if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
-    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Initialize SQLAlchemy with Flask app
 db.init_app(app)
 
 # Configuration
-UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(__file__), 'static', 'uploads'))
+UPLOAD_FOLDER = os.environ.get(
+    "UPLOAD_FOLDER", os.path.join(os.path.dirname(__file__), "static", "uploads")
+)
 ALLOWED_EXTENSIONS = {"pdf"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -158,8 +185,10 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # Limite à 16 Mo
 # Flask-Login Setup
 # ============================================================================
 
+
 class User(UserMixin):
     """User class for Flask-Login compatibility"""
+
     def __init__(self, id, username, password_hash, role):
         self.id = id
         self.username = username
@@ -191,6 +220,7 @@ def load_user(user_id):
 # Utility Functions
 # ============================================================================
 
+
 def ensure_upload_folder():
     """Ensure upload folder exists (lazy creation to avoid issues on read-only filesystems)"""
     try:
@@ -200,6 +230,7 @@ def ensure_upload_folder():
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     except Exception as e:
         import sys
+
         print(f"Warning: Could not create upload folder: {e}", file=sys.stderr)
         pass
 
@@ -211,6 +242,7 @@ def allowed_file(filename):
 
 def admin_required(f):
     """Decorator to check if user is admin"""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
@@ -219,6 +251,7 @@ def admin_required(f):
             flash("Accès refusé. Réservé aux administrateurs.", "danger")
             return redirect(url_for("index"))
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -318,19 +351,20 @@ def validate_document_attributes(type_name, attributes):
 # Database Functions (SQLAlchemy)
 # ============================================================================
 
+
 def init_db():
     """Initialise la base de données avec les tables nécessaires"""
     with app.app_context():
         # Create all tables defined in SQLAlchemy models
         db.create_all()
-        
+
         # Check if we need to add default users
         if UserDB.query.count() == 0:
             # Mot de passe par défaut pour admin : "admin123"
             admin_password = generate_password_hash("admin123")
             admin = UserDB(username="admin", password=admin_password, role="admin")
             db.session.add(admin)
-            
+
             # Ajouter quelques utilisateurs tests
             user_password = generate_password_hash("password")
             user1 = UserDB(username="user1", password=user_password, role="user")
@@ -338,15 +372,12 @@ def init_db():
             db.session.add(user1)
             db.session.add(user2)
             db.session.commit()
-        
+
         # Mettre à jour les utilisateurs existants sans password
         users_without_pass = UserDB.query.filter(
-            or_(
-                UserDB.password.is_(None),
-                UserDB.password == ""
-            )
+            or_(UserDB.password.is_(None), UserDB.password == "")
         ).all()
-        
+
         for user in users_without_pass:
             # Générer un mot de passe par défaut (username + '123')
             default_password = generate_password_hash(user.username + "123")
@@ -475,6 +506,7 @@ def geocode_address(address, use_cache=True):
     # Essayer Nominatim (OpenStreetMap) seulement si requests est disponible
     try:
         import requests
+
         has_requests = True
     except ImportError:
         has_requests = False
@@ -522,9 +554,7 @@ def _save_to_geocode_cache(address, latitude, longitude):
             cache_entry.accessed_at = func.now()
         else:
             cache_entry = GeocodeCacheDB(
-                address=address,
-                latitude=latitude,
-                longitude=longitude
+                address=address, latitude=latitude, longitude=longitude
             )
             db.session.add(cache_entry)
         db.session.commit()
@@ -535,6 +565,7 @@ def _save_to_geocode_cache(address, latitude, longitude):
 # ============================================================================
 # Dashboard Configuration Functions (SQLAlchemy)
 # ============================================================================
+
 
 def get_default_dashboard_config():
     """Retourne la configuration par défaut du dashboard"""
@@ -615,10 +646,9 @@ def get_user_dashboard_config(user_id, config_name="default"):
     """
     # Try to find existing config
     config_db = DashboardConfigDB.query.filter_by(
-        user_id=user_id,
-        config_name=config_name
+        user_id=user_id, config_name=config_name
     ).first()
-    
+
     if config_db:
         config = {
             "layout": json.loads(config_db.layout) if config_db.layout else [],
@@ -627,7 +657,7 @@ def get_user_dashboard_config(user_id, config_name="default"):
     else:
         # Créer la configuration par défaut
         config = get_default_dashboard_config()
-        
+
         # Save the default config
         new_config = DashboardConfigDB(
             user_id=user_id,
@@ -638,7 +668,7 @@ def get_user_dashboard_config(user_id, config_name="default"):
         )
         db.session.add(new_config)
         db.session.commit()
-    
+
     return config
 
 
@@ -646,10 +676,9 @@ def save_user_dashboard_config(user_id, config_name, config):
     """Sauvegarde la configuration du dashboard pour un utilisateur"""
     # Check if config exists
     config_db = DashboardConfigDB.query.filter_by(
-        user_id=user_id,
-        config_name=config_name
+        user_id=user_id, config_name=config_name
     ).first()
-    
+
     if config_db:
         # Update existing
         config_db.layout = json.dumps(config["layout"])
@@ -665,7 +694,7 @@ def save_user_dashboard_config(user_id, config_name, config):
             is_default=True,
         )
         db.session.add(config_db)
-    
+
     db.session.commit()
     return True
 
@@ -676,11 +705,8 @@ def delete_user_dashboard_config(user_id, config_name):
         return False  # On ne peut pas supprimer la config par défaut
 
     # Delete the configuration
-    DashboardConfigDB.query.filter_by(
-        user_id=user_id,
-        config_name=config_name
-    ).delete()
-    
+    DashboardConfigDB.query.filter_by(user_id=user_id, config_name=config_name).delete()
+
     db.session.commit()
     return True
 
@@ -688,11 +714,14 @@ def delete_user_dashboard_config(user_id, config_name):
 def get_user_dashboard_configs(user_id):
     """Récupère toutes les configurations de dashboard pour un utilisateur"""
     # Query all configs for this user
-    configs = DashboardConfigDB.query.filter_by(user_id=user_id).order_by(
-        desc(DashboardConfigDB.is_default),
-        desc(DashboardConfigDB.updated_at)
-    ).all()
-    
+    configs = (
+        DashboardConfigDB.query.filter_by(user_id=user_id)
+        .order_by(
+            desc(DashboardConfigDB.is_default), desc(DashboardConfigDB.updated_at)
+        )
+        .all()
+    )
+
     return [
         {
             "name": config.config_name,
@@ -893,10 +922,16 @@ def get_all_documents_for_user(user_id=None, user_role=None):
     """
     # Build query based on user role
     if user_role == "admin":
-        documents_query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).order_by(DocumentDB.upload_date.desc())
+        documents_query = DocumentDB.query.join(
+            UserDB, DocumentDB.user_id == UserDB.id
+        ).order_by(DocumentDB.upload_date.desc())
     else:
-        documents_query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).filter(DocumentDB.user_id == user_id).order_by(DocumentDB.upload_date.desc())
-    
+        documents_query = (
+            DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id)
+            .filter(DocumentDB.user_id == user_id)
+            .order_by(DocumentDB.upload_date.desc())
+        )
+
     documents = documents_query.all()
 
     result = []
@@ -916,18 +951,20 @@ def get_all_documents_for_user(user_id=None, user_role=None):
             attrs["_longitude"] = lon
 
         # Add to result with all data
-        result.append({
-            "id": doc.id,
-            "title": doc.title,
-            "content": doc.content,
-            "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
-            "validity_date": str(doc.validity_date) if doc.validity_date else None,
-            "file_path": doc.file_path,
-            "type": doc.type,
-            "attributes": attrs,
-            "username": doc.owner.username,
-            "user_id": doc.owner.id,
-        })
+        result.append(
+            {
+                "id": doc.id,
+                "title": doc.title,
+                "content": doc.content,
+                "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
+                "validity_date": str(doc.validity_date) if doc.validity_date else None,
+                "file_path": doc.file_path,
+                "type": doc.type,
+                "attributes": attrs,
+                "username": doc.owner.username,
+                "user_id": doc.owner.id,
+            }
+        )
 
     return result
 
@@ -935,6 +972,7 @@ def get_all_documents_for_user(user_id=None, user_role=None):
 # ============================================================================
 # Routes principales
 # ============================================================================
+
 
 # Contexte global pour les templates
 @app.context_processor
@@ -969,7 +1007,7 @@ def health():
     # Initialize database on first healthcheck if not already done
     from app_sqlalchemy import db, init_db
     from flask import current_app
-    
+
     try:
         # Check if DB is already initialized by trying a simple query
         with current_app.app_context():
@@ -979,7 +1017,7 @@ def health():
         # DB not ready, initialize with retries
         max_retries = 5
         retry_count = 0
-        
+
         while retry_count < max_retries:
             try:
                 init_db()
@@ -987,12 +1025,13 @@ def health():
             except Exception as e:
                 retry_count += 1
                 import time
-                wait_time = 2 ** retry_count
+
+                wait_time = 2**retry_count
                 if retry_count < max_retries:
                     time.sleep(wait_time)
                 else:
                     raise
-    
+
     return "OK", 200
 
 
@@ -1012,7 +1051,9 @@ def index():
     if current_user.role == "admin":
         query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id)
     else:
-        query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).filter(DocumentDB.user_id == current_user.id)
+        query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).filter(
+            DocumentDB.user_id == current_user.id
+        )
 
     # Ajouter les filtres de recherche
     if search_author:
@@ -1058,20 +1099,28 @@ def index():
         # Convert dates to strings for template compatibility
         upload_date_str = doc.upload_date.isoformat() if doc.upload_date else None
         validity_date_str = str(doc.validity_date) if doc.validity_date else None
-        
-        docs_with_attrs.append({
-            "id": doc.id,
-            "title": doc.title,
-            "content": doc.content,
-            "upload_date": upload_date_str,
-            "validity_date": validity_date_str,
-            "file_path": doc.file_path,
-            "type": doc.type,
-            "username": doc.owner.username,
-            "attributes": attrs,
-        })
 
-    return render_template("index.html", documents=docs_with_attrs, current_user=current_user, document_types=get_document_types(), current_date=date.today().isoformat())
+        docs_with_attrs.append(
+            {
+                "id": doc.id,
+                "title": doc.title,
+                "content": doc.content,
+                "upload_date": upload_date_str,
+                "validity_date": validity_date_str,
+                "file_path": doc.file_path,
+                "type": doc.type,
+                "username": doc.owner.username,
+                "attributes": attrs,
+            }
+        )
+
+    return render_template(
+        "index.html",
+        documents=docs_with_attrs,
+        current_user=current_user,
+        document_types=get_document_types(),
+        current_date=date.today().isoformat(),
+    )
 
 
 # Routes de login
@@ -1088,7 +1137,7 @@ def login():
 
         # Use SQLAlchemy instead of sqlite3
         user_db = UserDB.query.filter_by(username=username).first()
-        
+
         if user_db and check_password_hash(user_db.password, password):
             user = User(
                 id=user_db.id,
@@ -1221,7 +1270,7 @@ def add_document():
                 )
                 db.session.add(new_doc)
                 db.session.commit()
-                
+
                 flash("Document ajouté avec succès !", "success")
                 return redirect(url_for("index"))
             except Exception as e:
@@ -1269,13 +1318,14 @@ def delete_document(doc_id):
 # Routes Admin
 # ============================================================================
 
+
 @app.route("/admin/users")
 @login_required
 @admin_required
 def admin_users():
     """Interface de gestion des utilisateurs"""
     users = UserDB.query.order_by(UserDB.created_at.desc()).all()
-    
+
     users_list = [
         {
             "id": user.id,
@@ -1285,7 +1335,7 @@ def admin_users():
         }
         for user in users
     ]
-    
+
     return render_template("admin/users.html", users=users_list)
 
 
@@ -1312,7 +1362,7 @@ def admin_add_user():
         if existing_user:
             flash("Ce nom d'utilisateur existe déjà", "error")
             return redirect(url_for("admin_users"))
-            
+
         password_hash = generate_password_hash(password)
         new_user = UserDB(username=username, password=password_hash, role=role)
         db.session.add(new_user)
@@ -1348,17 +1398,16 @@ def admin_edit_user(user_id):
         try:
             # Check if new username already exists (excluding current user)
             existing_user = UserDB.query.filter(
-                UserDB.username == new_username,
-                UserDB.id != user_id
+                UserDB.username == new_username, UserDB.id != user_id
             ).first()
             if existing_user:
                 flash("Ce nom d'utilisateur existe déjà", "error")
                 return redirect(url_for("admin_edit_user", user_id=user_id))
-                
+
             # Update user
             user.username = new_username
             user.role = new_role
-            
+
             if new_password:
                 if len(new_password) < 6:
                     flash(
@@ -1366,7 +1415,7 @@ def admin_edit_user(user_id):
                     )
                     return redirect(url_for("admin_edit_user", user_id=user_id))
                 user.password = generate_password_hash(new_password)
-            
+
             db.session.commit()
             flash("Utilisateur modifié avec succès !", "success")
             return redirect(url_for("admin_users"))
@@ -1394,16 +1443,16 @@ def admin_delete_user(user_id):
     try:
         # Supprimer les documents de l'utilisateur
         docs = DocumentDB.query.filter_by(user_id=user_id).all()
-        
+
         for doc in docs:
             if doc.file_path:
                 file_path = os.path.join(app.config["UPLOAD_FOLDER"], doc.file_path)
                 if os.path.exists(file_path):
                     os.remove(file_path)
-        
+
         # Supprimer les documents de la base
         DocumentDB.query.filter_by(user_id=user_id).delete()
-        
+
         # Supprimer l'utilisateur
         db.session.delete(user)
         db.session.commit()
@@ -1441,6 +1490,7 @@ def uploaded_file(filename):
 # Dashboard Operations - Routes principales
 # ============================================================================
 
+
 @app.route("/operations")
 @login_required
 def operations_dashboard():
@@ -1466,6 +1516,7 @@ def operations_dashboard():
 # ============================================================================
 # Dashboard Operations - API Routes
 # ============================================================================
+
 
 @app.route("/api/dashboard/config", methods=["GET"])
 @login_required
@@ -1564,6 +1615,7 @@ def api_get_all_widgets_data():
 # API REST avec authentification JWT
 # ============================================================================
 
+
 # Décorateur pour vérifier le token JWT
 def jwt_required(f):
     """Décorateur pour vérifier que la requête a un token JWT valide"""
@@ -1623,6 +1675,7 @@ def create_jwt_token(user):
 # Routes API REST
 # ============================================================================
 
+
 @app.route("/api/login", methods=["POST"])
 def api_login():
     """Authentification via API - retourne un token JWT"""
@@ -1635,7 +1688,7 @@ def api_login():
     password = data["password"]
 
     user_db = UserDB.query.filter_by(username=username).first()
-    
+
     if not user_db or not check_password_hash(user_db.password, password):
         return jsonify({"error": "Invalid username or password"}), 401
 
@@ -1936,7 +1989,7 @@ def api_create_user():
         existing_user = UserDB.query.filter_by(username=username).first()
         if existing_user:
             return jsonify({"error": "Username already exists"}), 400
-            
+
         password_hash = generate_password_hash(password)
         new_user = UserDB(username=username, password=password_hash, role=role)
         db.session.add(new_user)
@@ -1980,13 +2033,13 @@ def api_delete_user(user_id):
     try:
         # Supprimer les documents de l'utilisateur
         docs = DocumentDB.query.filter_by(user_id=user_id).all()
-        
+
         for doc in docs:
             if doc.file_path:
                 file_path = os.path.join(app.config["UPLOAD_FOLDER"], doc.file_path)
                 if os.path.exists(file_path):
                     os.remove(file_path)
-        
+
         DocumentDB.query.filter_by(user_id=user_id).delete()
         db.session.delete(user)
         db.session.commit()

@@ -342,7 +342,7 @@ def init_db():
         # Mettre à jour les utilisateurs existants sans password
         users_without_pass = UserDB.query.filter(
             or_(
-                UserDB.password == None,
+                UserDB.password.is_(None),
                 UserDB.password == ""
             )
         ).all()

@@ -104,7 +104,7 @@
                         <span>{{ current_user.username }}</span>
                         <i class="fas fa-chevron-down"></i>
                         
-                        <div class="user-dropdown">
+                        <div class="user-dropdown" style="display: none;">
                             <div class="user-info">
                                 <div style="font-weight: 600;">{{ current_user.username }}</div>
                                 <div style="font-size: 12px; color: var(--text-light); margin-top: 5px;">
@@ -165,68 +165,60 @@
     
     <script>
         // Sidebar behavior
-        let sidebarPinned = true;
+        let sidebarCollapsed = false;
         
         function toggleSidebar() {
             const sidebar = document.querySelector('.sidebar');
-            const mainContent = document.querySelector('.main-content');
             const pinToggle = document.getElementById('pin-toggle');
             
-            if (sidebarPinned) {
-                // Unpin sidebar - will auto-hide
-                sidebar.classList.remove('pinned');
-                sidebarPinned = false;
-                mainContent.style.marginLeft = '0';
+            sidebarCollapsed = !sidebarCollapsed;
+            
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
             } else {
-                // Pin sidebar - will stay open
-                sidebar.classList.add('pinned');
-                sidebarPinned = true;
-                mainContent.style.marginLeft = 'var(--sidebar-width)';
+                sidebar.classList.remove('collapsed');
             }
             
             // Update pin icon
             if (pinToggle) {
-                pinToggle.innerHTML = sidebarPinned ? 
-                    '<i class="fas fa-thumbtack"></i>' : 
-                    '<i class="far fa-thumbtack"></i>';
+                pinToggle.innerHTML = sidebarCollapsed ? 
+                    '<i class="far fa-thumbtack"></i>' : 
+                    '<i class="fas fa-thumbtack"></i>';
+                pinToggle.title = sidebarCollapsed ? 'Déplier le menu' : 'Replier le menu';
             }
         }
         
-        // Auto-hide sidebar on mouse leave when not pinned
+        // Auto-hide sidebar on mouse leave
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.querySelector('.sidebar');
-            const mainContent = document.querySelector('.main-content');
             const pinToggle = document.getElementById('pin-toggle');
             
-            if (sidebar && mainContent) {
-                // Initially pinned
-                sidebar.classList.add('pinned');
-                mainContent.style.marginLeft = 'var(--sidebar-width)';
+            if (sidebar) {
+                // By default, sidebar is expanded
+                sidebar.classList.remove('collapsed');
                 
-                // On mouse enter - show sidebar
-                sidebar.addEventListener('mouseenter', function() {
-                    if (!sidebarPinned) {
-                        mainContent.style.marginLeft = 'var(--sidebar-width)';
-                    }
-                });
-                
-                // On mouse leave - hide sidebar if not pinned
+                // Collapse on mouse leave
                 sidebar.addEventListener('mouseleave', function() {
-                    if (!sidebarPinned) {
-                        mainContent.style.marginLeft = '0';
+                    // Only collapse if we're in auto-hide mode (not pinned)
+                    // For now, we'll just use the collapsed class
+                    if (sidebarCollapsed) {
+                        sidebar.classList.add('collapsed');
                     }
                 });
                 
-                // Update pin icon based on state
-                function updatePinIcon() {
-                    if (pinToggle) {
-                        pinToggle.innerHTML = sidebarPinned ? 
-                            '<i class="fas fa-thumbtack"></i>' : 
-                            '<i class="far fa-thumbtack"></i>';
+                // Expand on mouse enter
+                sidebar.addEventListener('mouseenter', function() {
+                    if (sidebarCollapsed) {
+                        sidebar.classList.remove('collapsed');
                     }
-                }
+                });
                 
-                updatePinIcon();
+                // Update pin icon on load
+                if (pinToggle) {
+                    pinToggle.innerHTML = sidebarCollapsed ? 
+                        '<i class="far fa-thumbtack"></i>' : 
+                        '<i class="fas fa-thumbtack"></i>';
+                }
             }
         });
         
@@ -266,6 +258,20 @@
                     if (dropdown) dropdown.style.display = 'none';
                 }
             });
+            
+            // Auto-hide flash messages after 3 seconds
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    setTimeout(function() {
+                        alert.style.opacity = '0';
+                        alert.style.transition = 'opacity 0.5s ease';
+                        setTimeout(function() {
+                            alert.style.display = 'none';
+                        }, 500);
+                    }, 3000);
+                });
+            }, 100);
         });
         
         // Modal functions
@@ -293,31 +299,7 @@
             }
         });
         
-        // Initialize GridStack for operations page
-        {% if request.path == '/operations' %}
-        document.addEventListener('DOMContentLoaded', function() {
-            const grid = GridStack.init({
-                float: true,
-                cellHeight: '70px',
-                minRow: 1,
-                acceptWidgets: true,
-                removeTimeout: 100,
-                oneColumnMode: 'mobile'
-            });
-            
-            // Load saved configuration
-            fetch('{{ url_for("api_get_dashboard_config") }}')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.grid_data && data.grid_data.length > 0) {
-                        grid.load(data.grid_data);
-                    }
-                });
-            
-            grid.enableRemove(false);
-            grid.setRemovable('.grid-stack-item', false);
-        });
-        {% endif %}
+
     </script>
     
     {% block extra_js %}{% endblock %}

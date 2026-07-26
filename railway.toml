@@ -3,6 +3,8 @@ dockerfile = "Dockerfile"
 
 [deploy]
 startCommand = "sh start.sh"
+healthcheckPath = "/health"
+healthcheckTimeout = 60
 
 [environment]
 DATABASE_URL = "$DATABASE_URL"

@@ -11,7 +11,8 @@
         "FLASK_ENV": "production",
         "DATABASE_URL": "$DATABASE_URL"
       },
-      "public": true
+      "public": true,
+      "port": 8000
     },
     "db": {
       "name": "CertificateManager-DB",
@@ -36,3 +37,4 @@
     "PORT": "$PORT"
   }
 }
+

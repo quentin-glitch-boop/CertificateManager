@@ -473,6 +473,10 @@
                     
                     gridData.forEach((widget, index) => {
                         const item = grid.addWidget(widget);
+                        
+                        // Load widget content immediately
+                        refreshWidgetContent(item.el);
+                        
                         item.el.addEventListener('click', function(e) {
                             if (e.target.classList.contains('widget-action-btn') || 
                                 e.target.closest('.widget-action-btn')) {
@@ -630,13 +634,14 @@
             fetch('{{ url_for("api_get_documents") }}')
                 .then(response => response.json())
                 .then(data => {
+                    const documents = data.documents || data;
                     const stats = {
-                        total: data.length,
-                        valid: data.filter(d => !d.validity_date || new Date(d.validity_date) >= new Date()).length,
-                        expiring: data.filter(d => d.validity_date && 
+                        total: documents.length,
+                        valid: documents.filter(d => !d.validity_date || new Date(d.validity_date) >= new Date()).length,
+                        expiring: documents.filter(d => d.validity_date && 
                             new Date(d.validity_date) >= new Date() && 
                             new Date(d.validity_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).length,
-                        expired: data.filter(d => d.validity_date && new Date(d.validity_date) < new Date()).length
+                        expired: documents.filter(d => d.validity_date && new Date(d.validity_date) < new Date()).length
                     };
                     
                     widgetEl.querySelector('#stat-total').textContent = stats.total;
@@ -819,13 +824,6 @@
             grid.remove(widgetEl, false);
         }
         
-        // Load all widgets on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                document.querySelectorAll('.grid-stack-item').forEach(widget => {
-                    refreshWidgetContent(widget);
-                });
-            }, 500);
-        });
+
     </script>
 {% endblock %}

@@ -249,7 +249,7 @@ def admin_required(f):
             return redirect(url_for("login"))
         if current_user.role != "admin":
             flash("Accès refusé. Réservé aux administrateurs.", "danger")
-            return redirect(url_for("index"))
+            return redirect(url_for("documents"))
         return f(*args, **kwargs)
 
     return decorated_function
@@ -1037,8 +1037,18 @@ def health():
 
 @app.route("/")
 @login_required
-def index():
-    """Page principale avec la liste des documents et la recherche"""
+def home():
+    """Page d'accueil avec présentation de l'outil"""
+    return render_template(
+        "home.html",
+        current_user=current_user,
+    )
+
+
+@app.route("/documents")
+@login_required
+def documents():
+    """Page avec la liste des documents et la recherche"""
     # Récupérer les critères de recherche
     search_author = request.args.get("author", "")
     search_upload_from = request.args.get("upload_from", "")
@@ -1128,7 +1138,7 @@ def index():
 def login():
     """Page de connexion"""
     if current_user.is_authenticated:
-        return redirect(url_for("index"))
+        return redirect(url_for("documents"))
 
     if request.method == "POST":
         username = request.form.get("username")
@@ -1147,7 +1157,7 @@ def login():
             )
             login_user(user, remember=remember)
             flash("Connexion réussie !", "success")
-            return redirect(url_for("index"))
+            return redirect(url_for("documents"))
         else:
             flash("Nom d'utilisateur ou mot de passe incorrect", "danger")
 
@@ -1174,12 +1184,12 @@ def set_language_route(lang):
             # Store in session
             session["language"] = lang
             # Create response with cookie
-            resp = make_response(redirect(request.referrer or url_for("index")))
+            resp = make_response(redirect(request.referrer or url_for("documents")))
             resp.set_cookie("language", lang, max_age=60 * 60 * 24 * 365)  # 1 year
             return resp
     except ImportError:
         pass
-    return redirect(request.referrer or url_for("index"))
+    return redirect(request.referrer or url_for("documents"))
 
 
 # Routes documents
@@ -1204,7 +1214,7 @@ def add_document():
                 # Vérifier que le fichier a une extension PDF
                 if not allowed_file(file.filename):
                     flash("Seuls les fichiers PDF sont autorisés", "error")
-                    return redirect(url_for("index"))
+                    return redirect(url_for("documents"))
 
                 # Sécuriser le nom du fichier
                 filename = secure_filename(file.filename)
@@ -1216,7 +1226,7 @@ def add_document():
                     and file.content_type != "application/pdf"
                 ):
                     flash("Le fichier doit être un PDF valide", "error")
-                    return redirect(url_for("index"))
+                    return redirect(url_for("documents"))
 
                 # Assurer que le dossier d'upload existe
                 ensure_upload_folder()
@@ -1227,7 +1237,7 @@ def add_document():
                     file.save(file_path)
                 except Exception as e:
                     flash(f"Erreur lors de l'upload : {str(e)}", "error")
-                    return redirect(url_for("index"))
+                    return redirect(url_for("documents"))
 
         # Récupérer les attributs spécifiques au type
         attributes = {}
@@ -1246,7 +1256,7 @@ def add_document():
             if not is_valid:
                 for error in errors:
                     flash(error, "error")
-                return redirect(url_for("index"))
+                return redirect(url_for("documents"))
 
         # Validation
         if not title:
@@ -1272,11 +1282,11 @@ def add_document():
                 db.session.commit()
 
                 flash("Document ajouté avec succès !", "success")
-                return redirect(url_for("index"))
+                return redirect(url_for("documents"))
             except Exception as e:
                 flash(f"Erreur : {str(e)}", "error")
 
-    return redirect(url_for("index"))
+    return redirect(url_for("documents"))
 
 
 @app.route("/delete/<int:doc_id>")
@@ -1288,14 +1298,14 @@ def delete_document(doc_id):
 
     if not doc:
         flash("Document non trouvé", "error")
-        return redirect(url_for("index"))
+        return redirect(url_for("documents"))
 
     # Vérifier les permissions
 
     # Vérifier les permissions
     if current_user.id != doc.user_id and current_user.role != "admin":
         flash("Vous ne pouvez pas supprimer ce document", "danger")
-        return redirect(url_for("index"))
+        return redirect(url_for("documents"))
 
     try:
         # Supprimer le fichier physique si il existe
@@ -1311,7 +1321,7 @@ def delete_document(doc_id):
     except Exception as e:
         flash(f"Erreur : {str(e)}", "error")
 
-    return redirect(url_for("index"))
+    return redirect(url_for("documents"))
 
 
 # ============================================================================

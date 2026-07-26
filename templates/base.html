@@ -39,13 +39,13 @@
             <nav>
                 <ul class="nav-menu">
                     <li>
-                        <a href="{{ url_for('index') }}" class="{% if request.path == '/' %}active{% endif %}">
+                        <a href="{{ url_for('home') }}" class="{% if request.path == '/' %}active{% endif %}">
                             <i class="fas fa-home nav-icon"></i>
                             <span>Accueil</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url_for('index') }}?tab=documents" class="{% if 'documents' in request.args.get('tab', '') %}active{% endif %}">
+                        <a href="{{ url_for('documents') }}" class="{% if request.path == '/documents' %}active{% endif %}">
                             <i class="fas fa-file-alt nav-icon"></i>
                             <span>Documents</span>
                         </a>
@@ -160,7 +160,7 @@
     
     <script>
         // Sidebar behavior
-        let sidebarCollapsed = false;
+        let sidebarCollapsed = true;
         
         function toggleSidebar() {
             const sidebar = document.querySelector('.sidebar');
@@ -189,8 +189,8 @@
             const pinToggle = document.getElementById('pin-toggle');
             
             if (sidebar) {
-                // By default, sidebar is expanded
-                sidebar.classList.remove('collapsed');
+                // By default, sidebar is collapsed (showing only icons)
+                sidebar.classList.add('collapsed');
                 
                 // Collapse on mouse leave
                 sidebar.addEventListener('mouseleave', function() {

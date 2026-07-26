@@ -335,16 +335,21 @@
         function toggleEditMode() {
             editMode = !editMode;
             const grid = GridStack.getGridByNode(document.querySelector('.grid-stack'));
+            const sidebar = document.querySelector('.sidebar');
             
             if (editMode) {
                 // Enter edit mode
-                document.querySelector('.sidebar').style.zIndex = '1000';
+                if (sidebar) {
+                    sidebar.style.zIndex = '1040';
+                }
                 document.getElementById('edit-mode-text').textContent = 'Terminer';
                 document.getElementById('btn-save').style.display = 'inline-flex';
                 document.getElementById('btn-cancel').style.display = 'inline-flex';
                 
                 // Save current grid state for cancel
-                originalGridData = grid.save(false);
+                if (grid) {
+                    originalGridData = grid.save(false);
+                }
                 
                 // Add edit class to all items
                 document.querySelectorAll('.grid-stack-item').forEach(item => {
@@ -358,7 +363,9 @@
                 
             } else {
                 // Exit edit mode
-                document.querySelector('.sidebar').style.zIndex = '1000';
+                if (sidebar) {
+                    sidebar.style.zIndex = '';
+                }
                 document.getElementById('edit-mode-text').textContent = 'Personnaliser';
                 document.getElementById('btn-save').style.display = 'none';
                 document.getElementById('btn-cancel').style.display = 'none';
@@ -377,12 +384,15 @@
         
         function cancelEdit() {
             const grid = GridStack.getGridByNode(document.querySelector('.grid-stack'));
-            grid.load(originalGridData);
+            if (grid) {
+                grid.load(originalGridData);
+            }
             toggleEditMode();
         }
         
         function saveDashboard() {
             const grid = GridStack.getGridByNode(document.querySelector('.grid-stack'));
+            if (!grid) return;
             const gridData = grid.save(false);
             
             // Map to layout format for backend
@@ -452,15 +462,27 @@
                     grid.removeAll(true);
                     // Convert layout format from backend to GridStack format
                     let gridData = [];
+                    const widgetMap = {
+                        'stats': createStatsWidget(),
+                        'timeline': createTimelineWidget(),
+                        'map': createMapWidget(),
+                        'data': createDataWidget(),
+                        'alerts': createTimelineWidget() // fallback for alerts
+                    };
+                    
+                    // Default widgets definition
+                    const defaultWidgets = [
+                        { id: 'stats', content: createStatsWidget(), w: 4, h: 3, x: 0, y: 0 },
+                        { id: 'timeline', content: createTimelineWidget(), w: 8, h: 4, x: 4, y: 0 },
+                        { id: 'map', content: createMapWidget(), w: 6, h: 5, x: 0, y: 3 },
+                        { id: 'data', content: createDataWidget(), w: 6, h: 5, x: 6, y: 4 }
+                    ];
+                    
                     if (data.layout && data.layout.length > 0) {
-                        // Map backend layout to GridStack widgets
-                        const widgetMap = {
-                            'stats': createStatsWidget(),
-                            'timeline': createTimelineWidget(),
-                            'map': createMapWidget(),
-                            'data': createDataWidget(),
-                            'alerts': createTimelineWidget() // fallback for alerts
-                        };
+                        // Use saved layout but ensure all default widgets are present
+                        const savedWidgetIds = new Set(data.layout.map(item => item.widget_id));
+                        
+                        // Add all widgets from saved layout
                         gridData = data.layout.map(layoutItem => {
                             const widgetId = layoutItem.widget_id;
                             return {
@@ -472,14 +494,44 @@
                                 y: layoutItem.y
                             };
                         });
+                        
+                        // Add any missing default widgets
+                        const allDefaultIds = new Set(defaultWidgets.map(w => w.id));
+                        defaultWidgets.forEach(defaultWidget => {
+                            if (!savedWidgetIds.has(defaultWidget.id)) {
+                                // Find next available position
+                                let x = 0, y = 0;
+                                const maxY = Math.max(...gridData.map(w => w.y + w.h), 0);
+                                
+                                // Try to find a non-overlapping position
+                                let positionFound = false;
+                                for (y = 0; y <= maxY + 5; y++) {
+                                    for (x = 0; x < 12; x++) {
+                                        const overlaps = gridData.some(w => 
+                                            x < w.x + w.w && x + defaultWidget.w > w.x &&
+                                            y < w.y + w.h && y + defaultWidget.h > w.y
+                                        );
+                                        if (!overlaps) {
+                                            positionFound = true;
+                                            break;
+                                        }
+                                    }
+                                    if (positionFound) break;
+                                }
+                                
+                                gridData.push({
+                                    id: defaultWidget.id,
+                                    content: defaultWidget.content,
+                                    w: defaultWidget.w,
+                                    h: defaultWidget.h,
+                                    x: x,
+                                    y: y
+                                });
+                            }
+                        });
                     } else {
-                        // Default widgets
-                        gridData = [
-                            { id: 'stats', content: createStatsWidget(), w: 4, h: 3, x: 0, y: 0 },
-                            { id: 'timeline', content: createTimelineWidget(), w: 8, h: 4, x: 4, y: 0 },
-                            { id: 'map', content: createMapWidget(), w: 6, h: 5, x: 0, y: 3 },
-                            { id: 'data', content: createDataWidget(), w: 6, h: 5, x: 6, y: 4 }
-                        ];
+                        // Use all default widgets
+                        gridData = defaultWidgets;
                     }
                     
                     gridData.forEach((widget, index) => {

@@ -12,6 +12,11 @@ A Flask-based web application for managing certificates and documents with expir
 - **Geolocation**: Map view showing certificate status by location
 - **Customizable Dashboard**: Drag-and-drop widgets in the Operations tab
 - **User Authentication**: Secure login system
+- **SQLAlchemy**: PostgreSQL database support with SQLAlchemy ORM
+
+## Deployment
+
+The application is deployed on Railway at: https://certificatemanager-web.up.railway.app
 
 ## Setup
 
@@ -28,7 +33,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Run the application
-python app.py
+python app_sqlalchemy.py
 ```
 
 ## Testing
@@ -58,7 +63,11 @@ black --check .
 
 ```
 certificate_retrieval/
-├── app.py                 # Main Flask application
+├── app_sqlalchemy.py      # Main Flask application with SQLAlchemy
+├── wsgi.py                # WSGI entry point for production
+├── start.sh               # Railway startup script
+├── railway.toml           # Railway deployment configuration
+├── init_db_with_certificates.py  # Database initialization script
 ├── requirements.txt       # Python dependencies
 ├── static/                # Static files (CSS, JS, images)
 ├── templates/             # HTML templates

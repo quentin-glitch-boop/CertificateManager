@@ -1,119 +1,85 @@
 import pytest
-import sqlite3
 import os
 import sys
+import tempfile
 from datetime import datetime, timedelta
 
 # Add parent directory to path to import app
-# Use absolute path to the project root for reliability
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
-# Also ensure the project root is in the path
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from app import app as _app, init_db, get_db
+from app_sqlalchemy import app as _app, db, init_db
 from werkzeug.security import generate_password_hash
 
 
 @pytest.fixture
-def app(tmp_path):
-    """Flask application in test mode"""
-    import os
-
-    # Create a temporary database file in pytest's tmp_path
-    db_path = tmp_path / "test_documents.db"
-
+def app():
+    """Flask application in test mode with SQLAlchemy"""
+    # Configure app for testing
     _app.config["TESTING"] = True
-    _app.config["DATABASE"] = str(db_path)
     _app.config["WTF_CSRF_ENABLED"] = False
     _app.config["SECRET_KEY"] = "test_secret_key_for_testing_only"
+    
+    # Use in-memory SQLite database for tests
+    _app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    _app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     return _app
 
 
 @pytest.fixture
 def client(app):
-    """Test client with application context"""
+    """Test client with application context and database"""
+    from app_sqlalchemy import UserDB, DocumentDB, DashboardConfigDB, GeocodeCacheDB
+    
     with app.app_context():
-        # Initialize database - this will create tables in the in-memory database
-        conn = get_db()
-        cursor = conn.cursor()
-
-        # Create tables
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                password TEXT NOT NULL,
-                role TEXT NOT NULL DEFAULT 'user',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS documents (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                content TEXT,
-                user_id INTEGER NOT NULL,
-                upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                validity_date DATE,
-                file_path TEXT,
-                type TEXT,
-                attributes TEXT,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-        """)
-        conn.commit()
-
+        # Create all tables
+        db.create_all()
+        
         # Clear existing data
-        cursor.execute("DELETE FROM documents")
-        cursor.execute("DELETE FROM users")
-
+        db.session.query(DashboardConfigDB).delete()
+        db.session.query(GeocodeCacheDB).delete()
+        db.session.query(DocumentDB).delete()
+        db.session.query(UserDB).delete()
+        db.session.commit()
+        
         # Add test users
         user_password = generate_password_hash("testpass123")
-        cursor.execute(
-            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-            ("testuser", user_password, "user"),
-        )
-        user1_id = cursor.lastrowid
-
+        user1 = UserDB(username="testuser", password=user_password, role="user")
+        db.session.add(user1)
+        db.session.commit()
+        
         admin_password = generate_password_hash("adminpass123")
-        cursor.execute(
-            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-            ("testadmin", admin_password, "admin"),
-        )
-        user2_id = cursor.lastrowid
-
-        cursor.execute(
-            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-            ("user2", generate_password_hash("password123"), "user"),
-        )
-
+        user2 = UserDB(username="testadmin", password=admin_password, role="admin")
+        db.session.add(user2)
+        db.session.commit()
+        
+        user3 = UserDB(username="user2", password=generate_password_hash("password123"), role="user")
+        db.session.add(user3)
+        db.session.commit()
+        
         # Add test document
-        cursor.execute(
-            """
-            INSERT INTO documents (title, content, user_id, validity_date, file_path, type, attributes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
-            (
-                "Test Document",
-                "Contenu de test",
-                user1_id,
-                "2026-12-31",
-                None,
-                "certificat",
-                None,
-            ),
+        doc = DocumentDB(
+            title="Test Document",
+            content="Contenu de test",
+            user_id=user1.id,
+            validity_date="2026-12-31",
+            file_path=None,
+            type="certificat",
+            attributes=None,
         )
-
-        conn.commit()
-        conn.close()
+        db.session.add(doc)
+        db.session.commit()
 
     with app.test_client() as client:
         yield client
-    # pytest's tmp_path fixture handles cleanup automatically
+    
+    # Clean up
+    with app.app_context():
+        db.session.remove()
+        db.drop_all()
 
 
 @pytest.fixture
@@ -149,43 +115,10 @@ def admin_client(client):
 
 
 @pytest.fixture
-def test_db():
+def test_db(app):
     """Temporary database for unit tests"""
-    import tempfile
-
-    db_fd, db_path = tempfile.mkstemp()
-
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'user',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE documents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            content TEXT,
-            user_id INTEGER NOT NULL,
-            upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            validity_date DATE,
-            file_path TEXT,
-            type TEXT,
-            attributes TEXT,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    """)
-
-    conn.commit()
-
-    yield conn
-
-    conn.close()
-    os.unlink(db_path)
+    with app.app_context():
+        db.create_all()
+        yield db
+        db.session.remove()
+        db.drop_all()

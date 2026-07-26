@@ -10,7 +10,7 @@ class TestDocumentTypes:
 
     def test_document_types_are_registered(self):
         """Test that document types are properly registered"""
-        from app import DOCUMENT_TYPES, get_document_types, get_document_type
+        from app_sqlalchemy import DOCUMENT_TYPES, get_document_types, get_document_type
 
         doc_types = get_document_types()
 
@@ -27,7 +27,7 @@ class TestDocumentTypes:
 
     def test_certificat_attributes_structure(self):
         """Test that certificat has the expected attributes"""
-        from app import get_document_type
+        from app_sqlalchemy import get_document_type
 
         certificat = get_document_type("certificat")
         attrs = certificat["attributes"]
@@ -58,7 +58,7 @@ class TestDocumentTypes:
 
     def test_validate_document_attributes_valid(self):
         """Test validation with valid attributes"""
-        from app import validate_document_attributes
+        from app_sqlalchemy import validate_document_attributes
 
         attributes = {
             "nom_societe_certifiee": "Societe A",
@@ -95,22 +95,15 @@ class TestDocumentTypes:
         assert response.status_code == 200
         assert b"Document" in response.data and b"succ" in response.data.lower()
 
-        # Verify in database
-        from app import get_db
+        # Verify in database using SQLAlchemy
+        from app_sqlalchemy import db, DocumentDB
         from flask import current_app
 
         with current_app.app_context():
-            conn = get_db()
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT type, attributes FROM documents WHERE title = ?",
-                ("Test Certificate Full",),
-            )
-            doc = cursor.fetchone()
-            conn.close()
-
+            doc = DocumentDB.query.filter_by(title="Test Certificate Full").first()
+            
             assert doc is not None
-            assert doc["type"] == "certificat"
-            attrs = json.loads(doc["attributes"]) if doc["attributes"] else {}
+            assert doc.type == "certificat"
+            attrs = json.loads(doc.attributes) if doc.attributes else {}
             assert attrs.get("nom_societe_certifiee") == "Test Company"
             assert attrs.get("url_telechargement") == "https://example.com/cert.pdf"

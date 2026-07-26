@@ -2,9 +2,9 @@
 set -e
 
 # Appliquer les migrations/initialisation si nécessaire
-if [ "$FLASK_ENV" = "production" ]; then
+if [ "$RAILWAY_ENVIRONMENT" = "production" ] || [ "$FLASK_ENV" = "production" ]; then
     echo "Initialising database for production..."
-    python init_db.py
+    python -c "from app_sqlalchemy import app, db; with app.app_context(): db.create_all()"
 fi
 
 # Créer le dossier des uploads

@@ -7,9 +7,11 @@ ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Installer les dépendances système
+# Installer les dépendances système pour PostgreSQL et build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    libpq-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Créer et activer un environnement virtuel
@@ -31,4 +33,4 @@ RUN mkdir -p static/uploads
 EXPOSE 8000
 
 # Commande par défaut (sera écrasée par docker-compose)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120", "app_sqlalchemy:app"]

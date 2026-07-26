@@ -256,6 +256,142 @@
     
     function formatDate(dateStr) { if(!dateStr) return 'N/A'; const date = new Date(dateStr); return date.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
     
+    // Global variable to store documents data
+    let allDocuments = [];
+    
+    // Load documents once and populate all widgets
+    function loadAllWidgetsData() {
+        apiFetch('{{ url_for("api_get_documents") }}')
+            .then(r => r.json())
+            .then(data => {
+                allDocuments = data.documents || data;
+                
+                // Now populate all widgets with data
+                const statsEl = document.querySelector('[data-widget-id="stats"]');
+                const timelineEl = document.querySelector('[data-widget-id="timeline"]');
+                const mapEl = document.querySelector('[data-widget-id="map"]');
+                const dataEl = document.querySelector('[data-widget-id="data"]');
+                
+                if(statsEl) updateStatsWidget(statsEl, allDocuments);
+                if(timelineEl) updateTimelineWidget(timelineEl, allDocuments);
+                if(mapEl) updateMapWidget(mapEl, allDocuments);
+                if(dataEl) updateDataWidget(dataEl, allDocuments);
+            })
+            .catch(error => {
+                console.error('Error loading documents:', error);
+            });
+    }
+    
+    // Updated refresh functions that use cached data
+    function refreshWidgetContent(widgetEl) {
+        if (!allDocuments || allDocuments.length === 0) {
+            loadAllWidgetsData();
+            return;
+        }
+        
+        const widgetType = widgetEl.querySelector('.widget-title').textContent;
+        if (widgetType.includes('Statistiques')) updateStatsWidget(widgetEl, allDocuments);
+        else if (widgetType.includes('Expirations')) updateTimelineWidget(widgetEl, allDocuments);
+        else if (widgetType.includes('Cartographie')) updateMapWidget(widgetEl, allDocuments);
+        else if (widgetType.includes('Documents')) updateDataWidget(widgetEl, allDocuments);
+    }
+    
+    function updateStatsWidget(widgetEl, documents) {
+        const stats = {
+            total: documents.length,
+            valid: documents.filter(d => !d.validity_date || new Date(d.validity_date) >= new Date()).length,
+            expiring: documents.filter(d => d.validity_date && 
+                new Date(d.validity_date) >= new Date() && 
+                new Date(d.validity_date) <= new Date(Date.now() + 30*24*60*60*1000)).length,
+            expired: documents.filter(d => d.validity_date && new Date(d.validity_date) < new Date()).length
+        };
+        
+        widgetEl.querySelector('#stat-total').textContent = stats.total;
+        widgetEl.querySelector('#stat-valid').textContent = stats.valid;
+        widgetEl.querySelector('#stat-expiring').textContent = stats.expiring;
+        widgetEl.querySelector('#stat-expired').textContent = stats.expired;
+    }
+    
+    function updateTimelineWidget(widgetEl, documents) {
+        const timelineEl = widgetEl.querySelector('#timeline-content');
+        if (!timelineEl) return;
+        
+        const now = new Date();
+        const in30Days = new Date(Date.now() + 30*24*60*60*1000);
+        const expiringSoon = documents.filter(d => d.validity_date && 
+            new Date(d.validity_date) >= now && new Date(d.validity_date) <= in30Days)
+            .sort((a,b) => new Date(a.validity_date) - new Date(b.validity_date));
+        const alreadyExpired = documents.filter(d => d.validity_date && new Date(d.validity_date) < now)
+            .sort((a,b) => new Date(b.validity_date) - new Date(a.validity_date));
+        
+        let html = '';
+        alreadyExpired.slice(0,3).forEach(doc => {
+            const author = doc.author || doc.username || 'Inconnu';
+            html += `<div class="timeline-item"><div class="timeline-date"><i class="fas fa-calendar-times text-danger"></i> ${formatDate(doc.validity_date)}</div><div class="timeline-content"><div class="timeline-document">${doc.title}</div><div class="text-sm text-secondary">Auteur: ${author}</div><span class="timeline-status status-expired">Expiré</span></div></div>`;
+        });
+        expiringSoon.forEach(doc => {
+            const daysLeft = Math.ceil((new Date(doc.validity_date)-now)/(1000*60*60*24));
+            const statusClass = daysLeft<=7?'status-expiring':'status-valid';
+            const statusText = daysLeft<=7?'Expirant bientôt':'Valide';
+            const author = doc.author || doc.username || 'Inconnu';
+            html += `<div class="timeline-item"><div class="timeline-date"><i class="fas fa-calendar-check text-warning"></i> ${formatDate(doc.validity_date)} (${daysLeft} jour${daysLeft>1?'s':''})</div><div class="timeline-content"><div class="timeline-document">${doc.title}</div><div class="text-sm text-secondary">Auteur: ${author}</div><span class="timeline-status ${statusClass}">${statusText}</span></div></div>`;
+        });
+        if(alreadyExpired.length===0 && expiringSoon.length===0) {
+            html = '<div class="text-center text-secondary p-md">Aucune expiration proche</div>';
+        }
+        timelineEl.innerHTML = html;
+    }
+    
+    function updateMapWidget(widgetEl, documents) {
+        const mapEl = widgetEl.querySelector('#map');
+        if (!mapEl) return;
+        
+        if(window.mapInstance) window.mapInstance.remove();
+        const map = L.map(mapEl).setView([46.603354, 1.888334], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        const siteCoords = {
+            'Besancon':[47.2378,6.0241],'Ashland':[37.1347,-84.8850],'Lyon':[45.7640,4.8357],
+            'Bornem':[51.2000,4.3000],'Merck':[40.7589,-73.9851],'Vervier':[50.5833,5.8500],
+            'Visp':[46.3167,7.8833],'Thermofisher':[42.3601,-71.0589],'Lonza Colmar':[48.0800,7.3500],
+            'Lonza Bornem':[51.2000,4.3000],'Default':[46.603354,1.888334]
+        };
+        
+        documents.forEach(doc => {
+            let site = 'Default';
+            if(doc.attributes?.site) site=doc.attributes.site;
+            else if(doc.attributes?.societe_certifiee) site=doc.attributes.societe_certifiee;
+            const coord = siteCoords[site] || siteCoords.Default;
+            const isValid = !doc.validity_date || new Date(doc.validity_date) >= new Date();
+            const author = doc.author || doc.username || 'Inconnu';
+            const icon = L.divIcon({
+                className:'map-marker',
+                html:`<i class="fas fa-${isValid?'check-circle':'exclamation-circle'} text-${isValid?'success':'danger'}" style="font-size:20px;"></i>`,
+                iconSize:[30,30]
+            });
+            L.marker(coord,{icon:icon}).addTo(map).bindPopup(`<b>${doc.title}</b><br>Auteur:${author}<br>Site:${site}<br>Statut:${isValid?'Valide':'Expiré'}`);
+        });
+        window.mapInstance = map;
+    }
+    
+    function updateDataWidget(widgetEl, documents) {
+        const tbody = widgetEl.querySelector('#data-table-body');
+        if (!tbody) return;
+        
+        const latestDocs = documents.sort((a,b) => new Date(b.upload_date) - new Date(a.upload_date)).slice(0,5);
+        let html = '';
+        latestDocs.forEach(doc => {
+            const isValid = !doc.validity_date || new Date(doc.validity_date) >= new Date();
+            const statusClass = isValid?'status-valid':'status-expired';
+            const statusText = isValid?'Valide':'Expiré';
+            const author = doc.author || doc.username || 'Inconnu';
+            html += `<tr><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${doc.title}</td><td>${doc.type||'N/A'}</td><td>${author}</td><td><span class="status-dot ${statusClass}"></span> ${statusText}</td></tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+    
     document.addEventListener('DOMContentLoaded',function(){
         // Wait for GridStack to be fully loaded
         setTimeout(function() {
@@ -281,12 +417,17 @@
             const mapItem = gridInstance.addWidget({id:'map', el: mapEl, w:6, h:5, x:0, y:4});
             const dataItem = gridInstance.addWidget({id:'data', el: dataEl, w:6, h:5, x:6, y:4});
             
-            // Refresh content
-            if(statsItem) refreshWidgetContent(statsItem.el);
-            if(timelineItem) refreshWidgetContent(timelineItem.el);
-            if(mapItem) refreshWidgetContent(mapItem.el);
-            if(dataItem) refreshWidgetContent(dataItem.el);
+            // Load data once and populate all widgets
+            if(gridInstance) {
+                loadAllWidgetsData();
+            }
         }, 100);
     });
+    
+    // Keep old refresh functions for compatibility
+    function refreshStatsWidget(widgetEl) { updateStatsWidget(widgetEl, allDocuments || []); }
+    function refreshTimelineWidget(widgetEl) { updateTimelineWidget(widgetEl, allDocuments || []); }
+    function refreshMapWidget(widgetEl) { updateMapWidget(widgetEl, allDocuments || []); }
+    function refreshDataWidget(widgetEl) { updateDataWidget(widgetEl, allDocuments || []); }
 </script>
 {% endblock %}

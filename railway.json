@@ -10,7 +10,8 @@
       "env": {
         "FLASK_ENV": "production",
         "DATABASE_URL": "$DATABASE_URL"
-      }
+      },
+      "public": true
     },
     "db": {
       "name": "CertificateManager-DB",

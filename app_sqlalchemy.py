@@ -968,6 +968,7 @@ def health():
     """Health check endpoint for Railway"""
     return "OK", 200
 
+
 @app.route("/")
 @login_required
 def index():

@@ -219,7 +219,7 @@ db.init_app(app)
 UPLOAD_FOLDER = os.environ.get(
     "UPLOAD_FOLDER", os.path.join(os.path.dirname(__file__), "static", "uploads")
 )
-ALLOWED_EXTENSIONS = {"pdf"}
+ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # Limite à 16 Mo
@@ -1258,6 +1258,170 @@ def set_language_route(lang):
 
 
 # Routes documents
+
+# Importer le module d'extraction
+from text_extractor import process_uploaded_file
+
+@app.route("/api/extract", methods=["POST"])
+@login_required
+def api_extract_document():
+    """
+    API endpoint pour extraire les informations d'un fichier uploadé.
+    
+    Cette route accepte un fichier (PDF ou image) et retourne les informations extraites.
+    """
+    if "file" not in request.files:
+        return jsonify({"success": False, "error": "Aucun fichier fourni"}), 400
+    
+    file = request.files["file"]
+    if not file or file.filename == "":
+        return jsonify({"success": False, "error": "Fichier invalide"}), 400
+    
+    # Traiter le fichier
+    result = process_uploaded_file(file)
+    
+    if not result["success"]:
+        return jsonify(result), 400
+    
+    # Formater les données pour le frontend
+    extracted_data = result["info"]
+    
+    # Ajouter le nom de fichier original
+    extracted_data["original_filename"] = file.filename
+    
+    return jsonify({
+        "success": True,
+        "text": result["text"][:2000],  # Limiter la taille du texte retourné
+        "extracted": extracted_data
+    })
+
+
+@app.route("/api/save-extracted", methods=["POST"])
+@login_required
+def api_save_extracted_document():
+    """
+    Sauvegarde un document avec les informations extraites et modifiées par l'utilisateur.
+    
+    Reçoit les données via FormData avec :
+    - file: le fichier uploadé
+    - json_data: les données JSON avec les champs extraits/modifiés
+    """
+    # Vérifier que le fichier a été uploadé
+    if "file" not in request.files:
+        return jsonify({"success": False, "error": "Aucun fichier fourni"}), 400
+    
+    file = request.files["file"]
+    if not file or file.filename == "":
+        return jsonify({"success": False, "error": "Fichier invalide"}), 400
+    
+    # Vérifier l'extension
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".pdf", ".png", ".jpg", ".jpeg"]:
+        return jsonify({"success": False, "error": "Type de fichier non autorisé"}), 400
+    
+    # Sauvegarder le fichier
+    ensure_upload_folder()
+    filename = secure_filename(file.filename)
+    try:
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(file_path)
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Erreur lors de l'upload: {str(e)}"}), 500
+    
+    # Récupérer les données JSON
+    json_data_str = request.form.get("json_data", "{}")
+    try:
+        data = json.loads(json_data_str)
+    except:
+        data = {}
+    
+    # Récupérer les informations
+    title = data.get("title", "").strip()
+    content = data.get("content", "").strip()
+    validity_date = data.get("validity_date", "")
+    doc_type = data.get("doc_type", "")
+    
+    # Construire les attributs à partir des champs extraits
+    attributes = {}
+    
+    # Organisme Certificateur -> societe_certificatrice
+    if data.get("organisme_certificateur"):
+        attributes["societe_certificatrice"] = data["organisme_certificateur"].strip()
+    
+    # Type de Norme -> norme
+    if data.get("type_norme"):
+        attributes["norme"] = data["type_norme"].strip()
+    
+    # Date de péremption
+    if data.get("date_peremption"):
+        attributes["date_peremption"] = data["date_peremption"].strip()
+    
+    # Entreprise Certifiée -> nom_societe_certifiee
+    if data.get("entreprise_certifiee"):
+        attributes["nom_societe_certifiee"] = data["entreprise_certifiee"].strip()
+    
+    # Pays
+    if data.get("pays"):
+        attributes["pays"] = data["pays"].strip()
+    
+    # Adresse
+    if data.get("adresse"):
+        attributes["adresse"] = data["adresse"].strip()
+    
+    # URL de téléchargement (optionnel)
+    if data.get("url_telechargement"):
+        attributes["url_telechargement"] = data["url_telechargement"].strip()
+    
+    # Sauvegarder dans la base
+    try:
+        db_file_path = os.path.basename(file_path) if file_path else None
+        
+        new_doc = DocumentDB(
+            title=title or "Document sans titre",
+            content=content,
+            user_id=current_user.id,
+            validity_date=validity_date if validity_date else None,
+            file_path=db_file_path,
+            type=doc_type,
+            attributes=json.dumps(attributes),
+        )
+        db.session.add(new_doc)
+        db.session.commit()
+        
+        # Associer aux produits si spécifiés
+        product_ids = data.get("product_ids", [])
+        if product_ids:
+            for prod_id in product_ids:
+                if isinstance(prod_id, (int, str)) and str(prod_id).isdigit():
+                    product = ProductDB.query.get(int(prod_id))
+                    if product and product.user_id == current_user.id:
+                        existing_rel = ProductDocumentDB.query.filter_by(
+                            product_id=int(prod_id), document_id=new_doc.id
+                        ).first()
+                        if not existing_rel:
+                            relation = ProductDocumentDB(
+                                product_id=int(prod_id),
+                                document_id=new_doc.id,
+                            )
+                            db.session.add(relation)
+            db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "document_id": new_doc.id,
+            "message": "Document ajouté avec succès !"
+        })
+        
+    except Exception as e:
+        # Nettoyer le fichier si erreur
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except:
+            pass
+        return jsonify({"success": False, "error": f"Erreur lors de la sauvegarde: {str(e)}"}), 500
+
+
 @app.route("/add", methods=["GET", "POST"])
 @login_required
 def add_document():

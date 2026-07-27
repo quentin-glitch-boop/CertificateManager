@@ -10,20 +10,20 @@ class TestDocumentList:
 
     def test_documents_page_loads(self, logged_in_client):
         """Documents page should load"""
-        response = logged_in_client.get("/")
+        response = logged_in_client.get("/documents")
         assert response.status_code == 200
         # Check for document list or similar content
         assert b"Document" in response.data or b"Rechercher" in response.data
 
     def test_documents_visible(self, logged_in_client):
         """Documents should be visible"""
-        response = logged_in_client.get("/")
+        response = logged_in_client.get("/documents")
         # The test document was added in conftest
         assert b"Test Document" in response.data or b"Contenu de test" in response.data
 
     def test_search_by_author(self, logged_in_client):
         """Search by author should work"""
-        response = logged_in_client.get("/?author=testuser")
+        response = logged_in_client.get("/documents?author=testuser")
         assert response.status_code == 200
         # Should find the test document
         assert b"Test Document" in response.data or b"Contenu de test" in response.data
@@ -79,7 +79,8 @@ class TestUserManagement:
         assert (
             b"Acces refuse" in response.data
             or response.status_code == 403
-            or response.request.path == "/"
+            or response.request.path == "/login"
+            or response.request.path == "/documents"
         )
 
     def test_add_user_as_admin(self, admin_client):

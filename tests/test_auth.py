@@ -17,7 +17,7 @@ class TestLogin:
         assert b"password" in response.data.lower() or b"Mot de passe" in response.data
 
     def test_login_success(self, client):
-        """Successful login should redirect to index"""
+        """Successful login should redirect to documents page"""
         response = client.post(
             "/login",
             data={"username": "testuser", "password": "testpass123"},
@@ -25,8 +25,8 @@ class TestLogin:
         )
 
         assert response.status_code == 200
-        assert response.request.path == "/"
-        assert b"Connexion" in response.data
+        assert response.request.path == "/documents"
+        assert b"Mes Documents" in response.data or b"Documents" in response.data
 
     def test_login_wrong_password(self, client):
         """Wrong password should show error"""

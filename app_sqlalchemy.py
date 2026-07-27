@@ -130,6 +130,50 @@ class DashboardConfigDB(db.Model):
     )
 
 
+# ============================================================================
+# Product Models - User-specific products and their document relationships
+# ============================================================================
+
+class ProductDB(db.Model):
+    """SQLAlchemy model for user products table"""
+
+    __tablename__ = "products"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    user = db.relationship("UserDB", backref="products")
+    documents = db.relationship(
+        "DocumentDB", 
+        secondary="product_document",
+        backref=db.backref("products", lazy=True),
+        lazy=True
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "name", name="uq_user_product_name"),
+    )
+
+
+class ProductDocumentDB(db.Model):
+    """Association table between products and documents (many-to-many relationship)"""
+
+    __tablename__ = "product_document"
+
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), primary_key=True)
+    document_id = db.Column(db.Integer, db.ForeignKey("documents.id"), primary_key=True)
+    created_at = db.Column(db.DateTime, server_default=func.now())
+
+    __table_args__ = (
+        db.UniqueConstraint("product_id", "document_id", name="uq_product_document"),
+    )
+
+
 class GeocodeCacheDB(db.Model):
     """SQLAlchemy model for geocode_cache table"""
 
@@ -986,11 +1030,19 @@ def inject_global_vars():
             get_translation,
         )
 
-        lang = get_current_language()
+        def get_current_lang():
+            # Retourne la langue actuelle (utilisée dans les templates)
+            return get_current_language()
+        
+        def translate_function(key):
+            # Appeler get_current_language() à chaque fois pour avoir la langue la plus récente
+            current_lang = get_current_lang()
+            return get_translation(key, current_lang)
+        
         return {
-            "current_lang": lang,
+            "current_lang": get_current_lang(),
             "available_languages": AVAILABLE_LANGUAGES,
-            "t": lambda key: get_translation(key, lang),
+            "t": translate_function,
         }
     except ImportError:
         # translations module not available (e.g., during testing)
@@ -1049,13 +1101,15 @@ def home():
 @login_required
 def documents():
     """Page avec la liste des documents et la recherche"""
-    # Récupérer les critères de recherche
+    # Récupérer les critères de recherche et pagination
     search_author = request.args.get("author", "")
     search_upload_from = request.args.get("upload_from", "")
     search_upload_to = request.args.get("upload_to", "")
     search_validity_from = request.args.get("validity_from", "")
     search_validity_to = request.args.get("validity_to", "")
     search_type = request.args.get("doc_type", "")
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
 
     # Construire la requête SQLAlchemy
     if current_user.role == "admin":
@@ -1087,8 +1141,9 @@ def documents():
     # Tri
     query = query.order_by(DocumentDB.upload_date.desc())
 
-    # Exécuter la requête
-    documents = query.all()
+    # Pagination
+    paginated_documents = query.paginate(page=page, per_page=per_page, error_out=False)
+    documents = paginated_documents.items
 
     # Parser les attributs JSON et ajouter les coordonnées
     docs_with_attrs = []
@@ -1124,12 +1179,19 @@ def documents():
             }
         )
 
+    # Récupérer les produits de l'utilisateur pour le sélecteur
+    user_products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
+    
     return render_template(
         "index.html",
         documents=docs_with_attrs,
         current_user=current_user,
         document_types=get_document_types(),
         current_date=date.today().isoformat(),
+        user_products=user_products,
+        pagination=paginated_documents,
+        page=page,
+        per_page=per_page,
     )
 
 
@@ -1180,16 +1242,19 @@ def set_language_route(lang):
         from translations import TRANSLATIONS, set_language as set_lang
 
         if lang in TRANSLATIONS:
-            set_lang(lang)
             # Store in session
             session["language"] = lang
             # Create response with cookie
-            resp = make_response(redirect(request.referrer or url_for("documents")))
+            next_url = request.args.get('next', url_for('documents'))
+            resp = make_response(redirect(next_url, code=303))  # 303 See Other pour forcer une requête GET fraîche
             resp.set_cookie("language", lang, max_age=60 * 60 * 24 * 365)  # 1 year
+            # Also set in session via set_lang
+            set_lang(lang)
             return resp
     except ImportError:
         pass
-    return redirect(request.referrer or url_for("documents"))
+    next_url = request.args.get('next', url_for('documents'))
+    return redirect(next_url)
 
 
 # Routes documents
@@ -1280,6 +1345,25 @@ def add_document():
                 )
                 db.session.add(new_doc)
                 db.session.commit()
+                
+                # Associer le document aux produits sélectionnés
+                product_ids = request.form.getlist("product_ids")
+                if product_ids:
+                    for prod_id in product_ids:
+                        if prod_id.isdigit():
+                            product = ProductDB.query.get(int(prod_id))
+                            if product and product.user_id == current_user.id:
+                                # Vérifier que la relation n'existe pas déjà
+                                existing_rel = ProductDocumentDB.query.filter_by(
+                                    product_id=int(prod_id), document_id=new_doc.id
+                                ).first()
+                                if not existing_rel:
+                                    relation = ProductDocumentDB(
+                                        product_id=int(prod_id),
+                                        document_id=new_doc.id,
+                                    )
+                                    db.session.add(relation)
+                    db.session.commit()
 
                 flash("Document ajouté avec succès !", "success")
                 return redirect(url_for("documents"))
@@ -1514,6 +1598,12 @@ def operations_dashboard():
     # Récupérer les infos des widgets disponibles
     widgets_info = DASHBOARD_WIDGETS
 
+    # Récupérer les produits de l'utilisateur pour le filtre
+    user_products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
+    
+    # Récupérer le produit sélectionné depuis les query params ou la session
+    selected_product_id = request.args.get('product_id', '')
+
     # Créer un token JWT pour les appels API depuis le frontend
     from app_sqlalchemy import create_jwt_token
     user_obj = User(
@@ -1531,7 +1621,294 @@ def operations_dashboard():
         widgets=widgets_info,
         current_user=current_user,
         jwt_token=jwt_token,
+        user_products=user_products,
+        selected_product_id=selected_product_id,
     )
+
+
+# ============================================================================
+# Product Routes - User-specific products with document associations
+# ============================================================================
+
+
+@app.route("/products")
+@login_required
+def my_products():
+    """Liste des produits de l'utilisateur"""
+    # Récupérer tous les produits de l'utilisateur
+    products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
+    
+    return render_template("products.html", products=products)
+
+
+@app.route("/products/add", methods=["GET", "POST"])
+@login_required
+def add_product():
+    """Ajouter un nouveau produit"""
+    if request.method == "POST":
+        name = request.form.get("name")
+        description = request.form.get("description")
+        document_ids = request.form.getlist("document_ids")
+        
+        # Validation
+        if not name:
+            flash("Le nom du produit est obligatoire", "error")
+            return render_template(
+                "products_add.html",
+                old_name=name,
+                old_description=description,
+                user_documents=DocumentDB.query.filter_by(user_id=current_user.id).all(),
+                selected_doc_ids=[int(x) for x in document_ids if x.isdigit()],
+            )
+        
+        # Vérifier que le nom est unique pour cet utilisateur
+        existing = ProductDB.query.filter_by(user_id=current_user.id, name=name).first()
+        if existing:
+            flash("Un produit avec ce nom existe déjà", "error")
+            return render_template(
+                "products_add.html",
+                old_name=name,
+                old_description=description,
+                user_documents=DocumentDB.query.filter_by(user_id=current_user.id).all(),
+                selected_doc_ids=[int(x) for x in document_ids if x.isdigit()],
+            )
+        
+        # Créer le produit
+        product = ProductDB(
+            user_id=current_user.id,
+            name=name,
+            description=description,
+        )
+        db.session.add(product)
+        db.session.commit()
+        
+        # Associer les documents sélectionnés
+        if document_ids:
+            for doc_id in document_ids:
+                if doc_id.isdigit():
+                    doc = DocumentDB.query.get(doc_id)
+                    if doc and doc.user_id == current_user.id:
+                        # Vérifier que la relation n'existe pas déjà
+                        existing_rel = ProductDocumentDB.query.filter_by(
+                            product_id=product.id, document_id=doc_id
+                        ).first()
+                        if not existing_rel:
+                            relation = ProductDocumentDB(
+                                product_id=product.id,
+                                document_id=doc_id,
+                            )
+                            db.session.add(relation)
+            db.session.commit()
+        
+        flash("Produit créé avec succès !", "success")
+        return redirect(url_for("my_products"))
+    
+    # GET - Afficher le formulaire
+    user_documents = DocumentDB.query.filter_by(user_id=current_user.id).all()
+    return render_template("products_add.html", user_documents=user_documents)
+
+
+@app.route("/products/<int:product_id>", methods=["GET"])
+@login_required
+def view_product(product_id):
+    """Voir les détails d'un produit"""
+    product = ProductDB.query.get_or_404(product_id)
+    
+    # Vérifier que le produit appartient à l'utilisateur
+    if product.user_id != current_user.id:
+        abort(403)
+    
+    return render_template("products_view.html", product=product)
+
+
+@app.route("/products/<int:product_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_product(product_id):
+    """Modifier un produit"""
+    product = ProductDB.query.get_or_404(product_id)
+    
+    # Vérifier que le produit appartient à l'utilisateur
+    if product.user_id != current_user.id:
+        abort(403)
+    
+    if request.method == "POST":
+        name = request.form.get("name")
+        description = request.form.get("description")
+        document_ids = request.form.getlist("document_ids")
+        
+        # Validation
+        if not name:
+            flash("Le nom du produit est obligatoire", "error")
+            user_documents = DocumentDB.query.filter_by(user_id=current_user.id).all()
+            product_document_ids = [doc.id for doc in product.documents]
+            return render_template(
+                "products_edit.html",
+                product=product,
+                user_documents=user_documents,
+                product_document_ids=product_document_ids,
+            )
+        
+        # Vérifier que le nom est unique pour cet utilisateur (sauf pour le produit actuel)
+        existing = ProductDB.query.filter(
+            ProductDB.user_id == current_user.id,
+            ProductDB.name == name,
+            ProductDB.id != product_id
+        ).first()
+        if existing:
+            flash("Un produit avec ce nom existe déjà", "error")
+            user_documents = DocumentDB.query.filter_by(user_id=current_user.id).all()
+            product_document_ids = [doc.id for doc in product.documents]
+            return render_template(
+                "products_edit.html",
+                product=product,
+                user_documents=user_documents,
+                product_document_ids=product_document_ids,
+            )
+        
+        # Mettre à jour le produit
+        product.name = name
+        product.description = description
+        product.updated_at = func.now()
+        
+        # Mettre à jour les documents associés
+        # D'abord, supprimer les anciennes relations qui ne sont plus sélectionnées
+        selected_doc_ids = [int(x) for x in document_ids if x.isdigit()]
+        
+        # Récupérer les IDs des documents actuellement associés
+        current_doc_ids = [doc.id for doc in product.documents]
+        
+        # Supprimer les relations pour les documents non sélectionnés
+        for doc_id in current_doc_ids:
+            if doc_id not in selected_doc_ids:
+                relation = ProductDocumentDB.query.filter_by(
+                    product_id=product.id, document_id=doc_id
+                ).first()
+                if relation:
+                    db.session.delete(relation)
+        
+        # Ajouter les nouvelles relations
+        for doc_id in selected_doc_ids:
+            if doc_id not in current_doc_ids:
+                doc = DocumentDB.query.get(doc_id)
+                if doc and doc.user_id == current_user.id:
+                    relation = ProductDocumentDB(
+                        product_id=product.id,
+                        document_id=doc_id,
+                    )
+                    db.session.add(relation)
+        
+        db.session.commit()
+        
+        flash("Produit mis à jour avec succès !", "success")
+        return redirect(url_for("my_products"))
+    
+    # GET - Afficher le formulaire
+    user_documents = DocumentDB.query.filter_by(user_id=current_user.id).all()
+    product_document_ids = [doc.id for doc in product.documents]
+    return render_template(
+        "products_edit.html",
+        product=product,
+        user_documents=user_documents,
+        product_document_ids=product_document_ids,
+    )
+
+
+@app.route("/products/<int:product_id>/delete", methods=["GET", "POST"])
+@login_required
+def delete_product(product_id):
+    """Supprimer un produit"""
+    product = ProductDB.query.get_or_404(product_id)
+    
+    # Vérifier que le produit appartient à l'utilisateur
+    if product.user_id != current_user.id:
+        abort(403)
+    
+    if request.method == "POST":
+        # Supprimer les relations avec les documents
+        ProductDocumentDB.query.filter_by(product_id=product.id).delete()
+        
+        # Supprimer le produit
+        db.session.delete(product)
+        db.session.commit()
+        
+        flash("Produit supprimé avec succès !", "success")
+        return redirect(url_for("my_products"))
+    
+    return render_template("products_delete.html", product=product)
+
+
+@app.route("/products/<int:product_id>/remove_document/<int:document_id>")
+@login_required
+def remove_document_from_product(product_id, document_id):
+    """Retirer un document d'un produit"""
+    product = ProductDB.query.get_or_404(product_id)
+    
+    # Vérifier que le produit appartient à l'utilisateur
+    if product.user_id != current_user.id:
+        abort(403)
+    
+    # Vérifier que le document appartient à l'utilisateur
+    doc = DocumentDB.query.get_or_404(document_id)
+    if doc.user_id != current_user.id:
+        abort(403)
+    
+    # Supprimer la relation
+    relation = ProductDocumentDB.query.filter_by(
+        product_id=product_id, document_id=document_id
+    ).first()
+    
+    if relation:
+        db.session.delete(relation)
+        db.session.commit()
+        flash("Document retiré du produit avec succès", "success")
+    
+    return redirect(url_for("edit_product", product_id=product_id))
+
+
+# ============================================================================
+# Product API Routes
+# ============================================================================
+
+
+@app.route("/api/products", methods=["GET"])
+@login_required
+def api_get_user_products():
+    """Récupère la liste des produits de l'utilisateur"""
+    products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
+    
+    products_list = []
+    for product in products:
+        products_list.append({
+            "id": product.id,
+            "name": product.name,
+            "description": product.description,
+            "document_count": len(product.documents),
+            "created_at": product.created_at.isoformat() if product.created_at else None,
+        })
+    
+    return jsonify({"success": True, "products": products_list})
+
+
+@app.route("/api/products/<int:product_id>/documents", methods=["GET"])
+@login_required
+def api_get_product_documents(product_id):
+    """Récupère les documents associés à un produit"""
+    product = ProductDB.query.get_or_404(product_id)
+    
+    if product.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Accès refusé"}), 403
+    
+    documents_list = []
+    for doc in product.documents:
+        documents_list.append({
+            "id": doc.id,
+            "title": doc.title,
+            "type": doc.type,
+            "validity_date": doc.validity_date.isoformat() if doc.validity_date else None,
+            "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
+        })
+    
+    return jsonify({"success": True, "documents": documents_list})
 
 
 # ============================================================================
@@ -1761,6 +2138,7 @@ def api_get_documents():
     upload_to = request.args.get("upload_to")
     validity_from = request.args.get("validity_from")
     validity_to = request.args.get("validity_to")
+    product_id = request.args.get("product_id")
 
     # Construire la requête SQLAlchemy
     if user_role == "admin":
@@ -1769,6 +2147,25 @@ def api_get_documents():
         query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).filter(
             DocumentDB.user_id == user_id
         )
+    
+    # Filtrer par produit si un product_id est spécifié
+    if product_id and product_id.isdigit():
+        # Filtrer par produit si un product_id est spécifié
+        if product_id and product_id.isdigit():
+            # Vérifier que le produit appartient à l'utilisateur (ou que l'utilisateur est admin)
+            product = ProductDB.query.get(int(product_id))
+            if product:
+                if user_role == "admin" or product.user_id == user_id:
+                    # Joindre avec la table product_document et filtrer
+                    query = query.join(ProductDocumentDB, DocumentDB.id == ProductDocumentDB.document_id)
+                    query = query.filter(ProductDocumentDB.product_id == int(product_id))
+                    # Distinct pour éviter les doublons si un document est dans plusieurs produits
+                    query = query.distinct()
+                else:
+                    # Le produit n'appartient pas à cet utilisateur, retourner une liste vide
+                    query = query.filter(False)
+            else:
+                query = query.filter(False)
 
     if author:
         query = query.filter(UserDB.username.ilike(f"%{author}%"))

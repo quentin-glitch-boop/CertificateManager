@@ -3,6 +3,33 @@
 {% block title %}Documents - CertiFlow{% endblock %}
 {% block breadcrumb_title %}Documents{% endblock %}
 
+{% block extra_css %}
+<style>
+    .document-card { transition: all 0.3s ease; }
+    .document-header { cursor: pointer; padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-light); }
+    .document-header:hover { background: var(--background); border-radius: var(--border-radius); }
+    .document-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+    .document-content.expanded { max-height: 1000px; }
+    .document-toggle { 
+        transition: transform 0.3s ease; 
+        display: inline-block; 
+        width: 20px; 
+        text-align: center;
+        font-size: var(--font-size-xs);
+    }
+    .document-toggle.expanded { transform: rotate(180deg); }
+    .document-main-info { margin-bottom: var(--spacing-md); }
+    .document-extra-info { margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--border-light); }
+    .document-field { margin-bottom: var(--spacing-xs); font-size: var(--font-size-sm); }
+    .document-field strong { color: var(--text-secondary); }
+    .document-field-value { color: var(--text-primary); }
+    .document-field-value a { color: var(--primary); }
+    .pagination-controls { display: flex; justify-content: center; gap: var(--spacing-sm); margin-top: var(--spacing-xl); flex-wrap: wrap; }
+    .pagination-controls .page-info { display: flex; align-items: center; }
+    .form-control-sm { padding: var(--spacing-xs) var(--spacing-sm); font-size: var(--font-size-sm); height: 32px; }
+</style>
+{% endblock %}
+
 {% block content %}
     <!-- Messages flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -80,12 +107,27 @@
             {% if documents|length == 0 %}
                 Aucun document trouvé
             {% else %}
-                {{ documents|length }} document(s) trouvé(s)
+                {% if pagination %}
+                    {{ pagination.total }} document(s) trouvé(s)
+                {% else %}
+                    {{ documents|length }} document(s) trouvé(s)
+                {% endif %}
             {% endif %}
         </h2>
-        <button class="btn btn-primary" onclick="openAddDocumentModal()">
-            <i class="fas fa-plus"></i> Ajouter un document
-        </button>
+        <div class="flex items-center gap-md">
+            <div class="flex items-center gap-sm">
+                <span class="text-sm">Par page:</span>
+                <select class="form-control form-control-sm" onchange="changePerPage(this)">
+                    <option value="5" {% if per_page == 5 %}selected{% endif %}>5</option>
+                    <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                    <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="openAddDocumentModal()">
+                <i class="fas fa-plus"></i> Ajouter un document
+            </button>
+        </div>
     </div>
 
     <!-- Liste des documents -->
@@ -107,68 +149,67 @@
             {% for doc in documents %}
                 <div class="card document-card fade-in">
                     <div class="card-body">
-                        <div class="flex justify-between items-start mb-md">
-                            <h5 class="document-title mb-0 flex items-center gap-sm">
-                                <i class="fas fa-file-pdf text-danger" style="font-size: 1.2rem;"></i>
-                                {{ doc.title }}
-                            </h5>
-                            <div class="flex gap-xs">
+                        <div class="document-header flex justify-between items-start" 
+                             onclick="toggleDocument({{ doc.id }})">
+                            <div class="flex-1">
+                                <h5 class="document-title mb-0 flex items-center gap-sm">
+                                    <i class="fas fa-file-pdf text-danger" style="font-size: 1.2rem;"></i>
+                                    {{ doc.title }}
+                                </h5>
+                            </div>
+                            <div class="flex items-center gap-xs">
                                 <span class="badge badge-primary">#{{ doc.id }}</span>
                                 {% if doc.type %}
                                     <span class="badge badge-info">{{ doc.type }}</span>
                                 {% endif %}
+                                <i class="fas fa-chevron-down document-toggle" id="toggle-{{ doc.id }}"></i>
                             </div>
                         </div>
                         
-                        <div class="document-meta">
-                            <div class="flex items-center mb-sm">
-                                <div class="user-avatar user-avatar-sm" style="width: 28px; height: 28px; font-size: 0.75rem;">
-                                    {{ doc.username[:1].upper() }}
-                                </div>
-                                <span class="ms-sm"><strong>Auteur:</strong> {{ doc.username }}</span>
-                            </div>
-                            <div class="mb-xs">
-                                <strong>Date upload:</strong> 
-                                {{ (doc.upload_date|string)[:10] if doc.upload_date else 'N/A' }}
-                            </div>
+                        <!-- Champs toujours visibles -->
+                        <div class="document-main-info">
                             {% if doc.validity_date %}
-                                <div class="flex items-center gap-sm">
-                                    <strong>Valable jusqu'au:</strong> 
-                                    {{ (doc.validity_date|string)[:10] if doc.validity_date else 'N/A' }}
-                                    {% if doc.validity_date < current_date %}
-                                        <span class="badge badge-danger">Expiré</span>
-                                    {% endif %}
+                                <div class="document-field">
+                                    <strong>Date de validité:</strong> 
+                                    <span class="document-field-value">
+                                        {{ (doc.validity_date|string)[:10] if doc.validity_date else 'N/A' }}
+                                        {% if doc.validity_date < current_date %}
+                                            <span class="badge badge-danger ms-sm">Expiré</span>
+                                        {% endif %}
+                                    </span>
                                 </div>
                             {% endif %}
                             
-                            <!-- Attributes -->
-                            {% if doc.type and doc.attributes %}
-                                <div class="mt-md pt-md border-top">
-                                    <strong class="text-sm">Détails:</strong>
-                                    <div class="mt-xs">
-                                        {% for attr_name, attr_value in doc.attributes.items() %}
-                                            <div class="text-sm text-secondary">
-                                                {% if doc.type in document_types %}
-                                                    {{ document_types[doc.type].attributes[attr_name].label if attr_name in document_types[doc.type].attributes else attr_name }}:
-                                                {% else %}
-                                                    {{ attr_name }}:
-                                                {% endif %}
-                                                <span class="text-primary">{{ attr_value }}</span>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
+                            {% if doc.type %}
+                                <div class="document-field">
+                                    <strong>Norme:</strong> 
+                                    <span class="document-field-value">{{ doc.type }}</span>
                                 </div>
+                            {% endif %}
+                            
+                            <!-- Organisme Certificateur et Nom de l'entreprise depuis les attributs -->
+                            {% if doc.attributes and doc.attributes is mapping %}
+                                {% set societe_cert = doc.attributes.get('societe_certificatrice', '') %}
+                                {% set societe_nom = doc.attributes.get('nom_societe_certifiee', '') %}
+                                
+                                {% if societe_cert %}
+                                    <div class="document-field">
+                                        <strong>Organisme Certificateur:</strong> 
+                                        <span class="document-field-value">{{ societe_cert }}</span>
+                                    </div>
+                                {% endif %}
+                                
+                                {% if societe_nom %}
+                                    <div class="document-field">
+                                        <strong>Nom de l'entreprise:</strong> 
+                                        <span class="document-field-value">{{ societe_nom }}</span>
+                                    </div>
+                                {% endif %}
                             {% endif %}
                         </div>
                         
-                        {% if doc.content %}
-                            <p class="text-secondary text-sm mt-md" style="max-height: 60px; overflow: hidden;">
-                                {{ doc.content[:150] }}
-                                {% if doc.content|length > 150 %}...{% endif %}
-                            </p>
-                        {% endif %}
-                        
-                        <div class="flex gap-sm mt-md pt-md border-top">
+                        <!-- Boutons toujours visibles -->
+                        <div class="flex gap-sm mt-md">
                             {% if doc.file_path %}
                                 <a href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" 
                                    target="_blank" 
@@ -184,10 +225,84 @@
                                 </a>
                             {% endif %}
                         </div>
+                        
+                        <!-- Champs dépliables -->
+                        <div class="document-content" id="content-{{ doc.id }}">
+                            <div class="document-extra-info">
+                                <div class="document-field">
+                                    <strong>Auteur:</strong> 
+                                    <span class="document-field-value">{{ doc.username }}</span>
+                                </div>
+                                
+                                {% if doc.content %}
+                                    <div class="document-field">
+                                        <strong>Commentaire:</strong> 
+                                        <span class="document-field-value">{{ doc.content }}</span>
+                                    </div>
+                                {% endif %}
+                                
+                                {% if doc.attributes and doc.attributes is mapping and doc.attributes.get('url_telechargement') %}
+                                    <div class="document-field">
+                                        <strong>URL du site:</strong> 
+                                        <span class="document-field-value">
+                                            <a href="{{ doc.attributes['url_telechargement'] }}" target="_blank">
+                                                {{ doc.attributes['url_telechargement'] }}
+                                            </a>
+                                        </span>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Autres attributs -->
+                                {% if doc.type and doc.attributes and doc.attributes is mapping %}
+                                    {% for attr_name, attr_value in doc.attributes.items() %}
+                                        {% if attr_name not in ['societe_certificatrice', 'nom_societe_certifiee', 'url_telechargement'] %}
+                                            <div class="document-field">
+                                                <strong>
+                                                    {% if doc.type in document_types %}
+                                                        {{ document_types[doc.type].attributes[attr_name].label if attr_name in document_types[doc.type].attributes else attr_name }}:
+                                                    {% else %}
+                                                        {{ attr_name }}:
+                                                    {% endif %}
+                                                </strong>
+                                                <span class="document-field-value">{{ attr_value }}</span>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                
+                                {% if doc.upload_date %}
+                                    <div class="document-field">
+                                        <strong>Date upload:</strong> 
+                                        <span class="document-field-value">{{ (doc.upload_date|string)[:10] if doc.upload_date else 'N/A' }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
             {% endfor %}
         </div>
+        
+        <!-- Pagination -->
+        {% if pagination and pagination.pages > 1 %}
+            <div class="pagination-controls">
+                <div class="page-info">
+                    <span>Affichage {{ pagination.items|length }} sur {{ pagination.total }} - Page {{ page }} sur {{ pagination.pages }}</span>
+                </div>
+                {% if pagination.has_prev %}
+                    <a href="?page={{ pagination.prev_num }}&amp;per_page={{ per_page }}{% for key, value in request.args.items() %}{% if key != 'page' and key != 'per_page' and value %}&amp;{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                       class="btn btn-sm btn-secondary">
+                        <i class="fas fa-chevron-left"></i> Précédent
+                    </a>
+                {% endif %}
+                {% if pagination.has_next %}
+                    <a href="?page={{ pagination.next_num }}&amp;per_page={{ per_page }}{% for key, value in request.args.items() %}{% if key != 'page' and key != 'per_page' and value %}&amp;{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                       class="btn btn-sm btn-secondary">
+                        Suivant <i class="fas fa-chevron-right"></i>
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
     {% endif %}
 
     <!-- Modal Ajouter Document -->
@@ -236,6 +351,20 @@
                         <input type="file" class="form-control" id="modal_file" name="file" accept=".pdf" required>
                         <div class="form-text text-sm text-secondary">PDF uniquement</div>
                     </div>
+                    
+                    {% if user_products|length > 0 %}
+                    <div class="form-group">
+                        <label for="modal_product_ids">Produits (optionnel)</label>
+                        <select class="form-control" id="modal_product_ids" name="product_ids" multiple>
+                            {% for product in user_products %}
+                            <option value="{{ product.id }}">{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text text-sm text-secondary">
+                            Maintenez Ctrl/Cmd pour sélectionner plusieurs produits
+                        </div>
+                    </div>
+                    {% endif %}
                     
                     <input type="hidden" name="user_id" value="{{ current_user.id }}">
                 </form>
@@ -312,6 +441,26 @@
             
             html += '</div>';
             container.innerHTML = html;
+        }
+        
+        // Toggle document expand/collapse
+        function toggleDocument(docId) {
+            const content = document.getElementById('content-' + docId);
+            const toggle = document.getElementById('toggle-' + docId);
+            
+            if (content && toggle) {
+                content.classList.toggle('expanded');
+                toggle.classList.toggle('expanded');
+            }
+        }
+        
+        // Change number of documents per page
+        function changePerPage(select) {
+            const perPage = select.value;
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('per_page', perPage);
+            urlParams.set('page', '1'); // Reset to first page when changing per_page
+            window.location.search = urlParams.toString();
         }
     </script>
 {% endblock %}

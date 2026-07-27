@@ -219,7 +219,7 @@ db.init_app(app)
 UPLOAD_FOLDER = os.environ.get(
     "UPLOAD_FOLDER", os.path.join(os.path.dirname(__file__), "static", "uploads")
 )
-ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
+ALLOWED_EXTENSIONS = {"pdf"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # Limite à 16 Mo
@@ -1316,7 +1316,7 @@ def api_save_extracted_document():
     
     # Vérifier l'extension
     ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".pdf", ".png", ".jpg", ".jpeg"]:
+    if ext not in [".pdf"]:
         return jsonify({"success": False, "error": "Type de fichier non autorisé"}), 400
     
     # Sauvegarder le fichier

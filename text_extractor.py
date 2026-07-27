@@ -1,7 +1,7 @@
 """
-Module d'extraction de texte et de données à partir de fichiers PDF et images.
+Module d'extraction de texte et de données à partir de fichiers PDF.
 
-Ce module utilise OCR (pytesseract) pour les images et pdfplumber pour les PDF.
+Ce module utilise pdfplumber et PyMuPDF pour extraire le texte des PDF.
 L'extraction des informations est basée sur des motifs simples (regex et string matching).
 """
 
@@ -19,21 +19,10 @@ except ImportError:
     PDF_AVAILABLE = False
 
 try:
-    import pytesseract
-    from PIL import Image
-    OCR_AVAILABLE = True
-except ImportError:
-    OCR_AVAILABLE = False
-
-try:
     import PyMuPDF
     FITZ_AVAILABLE = True
 except ImportError:
     FITZ_AVAILABLE = False
-
-
-# Configuration de pytesseract (si nécessaire)
-# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
 def extract_text_from_pdf(pdf_path: str) -> str:
@@ -71,34 +60,15 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     return text
 
 
-def extract_text_from_image(image_path: str) -> str:
-    """
-    Extrait le texte d'une image (PNG, JPG) en utilisant OCR.
-    
-    Args:
-        image_path: Chemin vers le fichier image
-        
-    Returns:
-        str: Texte extrait
-    """
-    if not OCR_AVAILABLE:
-        return ""
-    
-    try:
-        # Ouvrir l'image et utiliser pytesseract
-        text = pytesseract.image_to_string(image_path, lang='fra+eng')
-        return text
-    except Exception as e:
-        print(f"Erreur lors de l'OCR: {e}")
-        return ""
+
 
 
 def extract_text_from_file(file_path: str) -> str:
     """
-    Extrait le texte d'un fichier (PDF ou image).
+    Extrait le texte d'un fichier PDF.
     
     Args:
-        file_path: Chemin vers le fichier
+        file_path: Chemin vers le fichier PDF
         
     Returns:
         str: Texte extrait
@@ -107,8 +77,6 @@ def extract_text_from_file(file_path: str) -> str:
     
     if ext in ['.pdf']:
         return extract_text_from_pdf(file_path)
-    elif ext in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff']:
-        return extract_text_from_image(file_path)
     else:
         return ""
 
@@ -339,10 +307,10 @@ def process_uploaded_file(file_storage) -> Dict[str, Any]:
         return result
     
     ext = os.path.splitext(filename)[1].lower()
-    allowed_extensions = ['.pdf', '.png', '.jpg', '.jpeg']
+    allowed_extensions = ['.pdf']
     
     if ext not in allowed_extensions:
-        result['error'] = f'Type de fichier non autorisé: {ext}. Seuls PDF, PNG et JPG sont acceptés.'
+        result['error'] = f'Type de fichier non autorisé: {ext}. Seuls les fichiers PDF sont acceptés.'
         return result
     
     # Sauvegarder temporairement le fichier
@@ -381,7 +349,7 @@ if __name__ == '__main__':
     # Test
     print("Testing text extractor...")
     print(f"PDF available: {PDF_AVAILABLE}")
-    print(f"OCR available: {OCR_AVAILABLE}")
+    print(f"Fitz (PyMuPDF) available: {FITZ_AVAILABLE}")
     
     # Tester l'extraction de texte
     test_text = """

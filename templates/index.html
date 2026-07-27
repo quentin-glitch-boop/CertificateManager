@@ -446,8 +446,8 @@
                     <div class="upload-area" id="upload-area" onclick="document.getElementById('file-upload-input').click()">
                         <i class="fas fa-cloud-upload-alt upload-icon"></i>
                         <div class="upload-instructions">Glissez-déposez votre fichier ici ou cliquez pour sélectionner</div>
-                        <div class="upload-hint">PDF et PNG acceptés (max 16 Mo)</div>
-                        <input type="file" id="file-upload-input" accept=".pdf,.png,.jpg,.jpeg" style="display: none;" onchange="handleFileUpload(event)">
+                        <div class="upload-hint">PDF uniquement (max 16 Mo)</div>
+                        <input type="file" id="file-upload-input" accept=".pdf" style="display: none;" onchange="handleFileUpload(event)">
                     </div>
                     
                     <div id="file-preview" class="file-preview">
@@ -692,9 +692,9 @@
             
             // Vérifier l'extension
             const ext = file.name.split('.').pop().toLowerCase();
-            const allowedExts = ['pdf', 'png', 'jpg', 'jpeg'];
+            const allowedExts = ['pdf'];
             if (!allowedExts.includes(ext)) {
-                flashMessage('Seuls les fichiers PDF, PNG et JPG sont acceptés', 'error');
+                flashMessage('Seuls les fichiers PDF sont acceptés', 'error');
                 event.target.value = '';
                 return;
             }

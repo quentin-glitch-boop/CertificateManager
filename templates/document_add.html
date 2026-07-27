@@ -145,7 +145,7 @@
                         <div class="text-sm text-secondary">Cela peut prendre quelques secondes</div>
                     </div>
                     
-                    <form id="extracted-info-form" action="{{ url_for('add') }}" method="POST" enctype="multipart/form-data">
+                    <form id="extracted-info-form" action="{{ url_for('add_document') }}" method="POST" enctype="multipart/form-data">
                         <input type="hidden" id="extracted-original-filename" name="original_filename">
                         
                         <div class="form-group">
@@ -502,7 +502,7 @@
             return;
         }
         
-        fetch('{{ url_for("add") }}', {
+        fetch('{{ url_for("add_document") }}', {
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + '{{ jwt_token }}'

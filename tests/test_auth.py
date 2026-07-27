@@ -73,11 +73,7 @@ class TestProtectedRoutes:
         """Admin route requires admin role"""
         response = client.get("/admin/users", follow_redirects=True)
         # Should redirect to login or show access denied
-        assert (
-            b"Acces refuse" in response.data
-            or response.request.path == "/login"
-            or response.status_code == 403
-        )
+        assert b"Acces refuse" in response.data or response.request.path == "/login" or response.status_code == 403
 
 
 class TestPasswordHashing:

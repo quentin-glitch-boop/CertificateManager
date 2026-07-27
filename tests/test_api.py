@@ -38,9 +38,7 @@ class TestAPILogin:
 
     def test_api_login_missing_data(self, client):
         """API login without data should fail"""
-        response = client.post(
-            "/api/login", data=json.dumps({}), content_type="application/json"
-        )
+        response = client.post("/api/login", data=json.dumps({}), content_type="application/json")
 
         assert response.status_code == 400
         data = json.loads(response.data)
@@ -74,9 +72,7 @@ class TestAPILogout:
         token = json.loads(login_response.data)["token"]
 
         # Then, logout
-        response = client.post(
-            "/api/logout", headers={"Authorization": f"Bearer {token}"}
-        )
+        response = client.post("/api/logout", headers={"Authorization": f"Bearer {token}"})
 
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -158,9 +154,7 @@ class TestAPIUsers:
 
     def test_api_get_users_as_admin(self, client):
         """Admin can get users list via API"""
-        headers = {
-            "Authorization": f'Bearer {self.get_token(client, "testadmin", "adminpass123")}'
-        }
+        headers = {"Authorization": f'Bearer {self.get_token(client, "testadmin", "adminpass123")}'}
         response = client.get("/api/users", headers=headers)
 
         assert response.status_code == 200
@@ -170,9 +164,7 @@ class TestAPIUsers:
 
     def test_api_get_users_unauthorized(self, client):
         """Non-admin cannot get users list"""
-        headers = {
-            "Authorization": f'Bearer {self.get_token(client, "testuser", "testpass123")}'
-        }
+        headers = {"Authorization": f'Bearer {self.get_token(client, "testuser", "testpass123")}'}
         response = client.get("/api/users", headers=headers)
 
         assert response.status_code == 403
@@ -183,9 +175,7 @@ class TestAPITokenValidation:
 
     def test_invalid_token(self, client):
         """Invalid token should be rejected"""
-        response = client.get(
-            "/api/documents", headers={"Authorization": "Bearer invalidtoken"}
-        )
+        response = client.get("/api/documents", headers={"Authorization": "Bearer invalidtoken"})
         assert response.status_code == 401
 
     def test_missing_token(self, client):

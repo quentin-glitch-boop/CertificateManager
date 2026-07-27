@@ -64,9 +64,15 @@
                     </li>
                     {% if current_user.role == 'admin' %}
                     <li>
-                        <a href="{{ url_for('admin_users') }}" class="{% if request.path.startswith('/admin') %}active{% endif %}">
+                        <a href="{{ url_for('admin_users') }}" class="{% if request.path.startswith('/admin/users') %}active{% endif %}">
                             <i class="fas fa-users nav-icon"></i>
                             <span>{{ t('users') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_certificate_check_config') }}" class="{% if request.path.startswith('/admin/certificate-check') %}active{% endif %}">
+                            <i class="fas fa-sync-alt nav-icon"></i>
+                            <span>Vérification Certificats</span>
                         </a>
                     </li>
                     {% endif %}

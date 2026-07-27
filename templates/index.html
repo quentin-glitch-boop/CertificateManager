@@ -137,6 +137,12 @@
         color: var(--text-primary);
         font-weight: 600;
     }
+    
+    /* Styles pour les groupes de certificats */
+    .certificate-group { border: 1px solid var(--border-light); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg); }
+    .group-header { background: var(--background); border-bottom: 2px solid var(--primary); }
+    .certificate-latest { border-left: 4px solid var(--primary); }
+    .space-y-lg > * + * { margin-top: var(--spacing-lg); }
 </style>
 {% endblock %}
 
@@ -156,46 +162,25 @@
     <!-- Section de recherche -->
     <div class="card mb-lg">
         <div class="card-header">
-            <h3><i class="fas fa-search me-md"></i> Rechercher des documents</h3>
+            <h3><i class="fas fa-search me-md"></i> Rechercher des certificats</h3>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ url_for('documents') }}" class="flex flex-col gap-md">
                 <div class="flex gap-lg flex-wrap">
-                    <div class="flex-1 min-w-200">
-                        <label for="search_doc_type" class="form-label mb-xs">Type de document</label>
-                        <select class="form-control select-control" id="search_doc_type" name="doc_type">
-                            <option value="">Tous les types</option>
-                            {% for type_id, type_config in document_types.items() %}
-                                <option value="{{ type_id }}" {% if search_type == type_id %}selected{% endif %}>
-                                    {{ type_config.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                    <div class="flex-1 min-w-250">
+                        <label for="entreprise" class="form-label mb-xs">Entreprise Certifiée</label>
+                        <input type="text" class="form-control" id="entreprise" name="entreprise" 
+                               value="{{ search_entreprise }}" placeholder="Nom de l'entreprise...">
                     </div>
-                    <div class="flex-1 min-w-200">
-                        <label for="author" class="form-label mb-xs">Auteur</label>
-                        <input type="text" class="form-control" id="author" name="author" 
-                               value="{{ search_author }}" placeholder="Rechercher par auteur...">
+                    <div class="flex-1 min-w-250">
+                        <label for="adresse" class="form-label mb-xs">Adresse</label>
+                        <input type="text" class="form-control" id="adresse" name="adresse" 
+                               value="{{ search_adresse }}" placeholder="Adresse...">
                     </div>
-                    <div class="flex-1 min-w-200">
-                        <label for="upload_from" class="form-label mb-xs">Date upload (de)</label>
-                        <input type="date" class="form-control" id="upload_from" name="upload_from" 
-                               value="{{ search_upload_from }}">
-                    </div>
-                    <div class="flex-1 min-w-200">
-                        <label for="upload_to" class="form-label mb-xs">Date upload (à)</label>
-                        <input type="date" class="form-control" id="upload_to" name="upload_to" 
-                               value="{{ search_upload_to }}">
-                    </div>
-                    <div class="flex-1 min-w-200">
-                        <label for="validity_from" class="form-label mb-xs">Validité (de)</label>
-                        <input type="date" class="form-control" id="validity_from" name="validity_from" 
-                               value="{{ search_validity_from }}">
-                    </div>
-                    <div class="flex-1 min-w-200">
-                        <label for="validity_to" class="form-label mb-xs">Validité (à)</label>
-                        <input type="date" class="form-control" id="validity_to" name="validity_to" 
-                               value="{{ search_validity_to }}">
+                    <div class="flex-1 min-w-250">
+                        <label for="norme" class="form-label mb-xs">Norme</label>
+                        <input type="text" class="form-control" id="norme" name="norme" 
+                               value="{{ search_norme }}" placeholder="Ex: ISO 9001:2015...">
                     </div>
                 </div>
                 <div class="flex gap-md mt-md">
@@ -240,154 +225,150 @@
         </div>
     </div>
 
-    <!-- Liste des documents -->
-    {% if documents|length == 0 %}
+    <!-- Liste des certificats groupés par Entreprise/Adresse/Type -->
+    {% if document_groups|length == 0 %}
         <div class="card text-center py-2xl">
             <div class="empty-state">
                 <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--text-light); margin-bottom: var(--spacing-lg);"></i>
-                <h3> Aucun document trouvé </h3>
+                <h3> Aucun certificat trouvé </h3>
                 <p class="text-secondary mt-md">
                     Essayez de modifier vos critères de recherche ou 
                     <a href="#" onclick="openAddDocumentModal()" class="text-primary">
-                        ajoutez votre premier document
+                        ajoutez votre premier certificat
                     </a>
                 </p>
             </div>
         </div>
     {% else %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
-            {% for doc in documents %}
-                <div class="card document-card fade-in">
-                    <div class="card-body">
-                        <div class="document-header flex justify-between items-start" 
-                             onclick="toggleDocument({{ doc.id }})">
-                            <div class="flex-1">
-                                <h5 class="document-title mb-0 flex items-center gap-sm">
-                                    <i class="fas fa-file-pdf text-danger" style="font-size: 1.2rem;"></i>
-                                    {{ doc.title }}
-                                </h5>
-                            </div>
-                            <div class="flex items-center gap-xs">
-                                <span class="badge badge-primary">#{{ doc.id }}</span>
-                                {% if doc.type %}
-                                    <span class="badge badge-info">{{ doc.type }}</span>
-                                {% endif %}
-                                <i class="fas fa-chevron-down document-toggle" id="toggle-{{ doc.id }}"></i>
-                            </div>
-                        </div>
-                        
-                        <!-- Champs toujours visibles -->
-                        <div class="document-main-info">
-                            {% if doc.validity_date %}
-                                <div class="document-field">
-                                    <strong>Date de validité:</strong> 
-                                    <span class="document-field-value">
-                                        {{ (doc.validity_date|string)[:10] if doc.validity_date else 'N/A' }}
-                                        {% if doc.validity_date < current_date %}
-                                            <span class="badge badge-danger ms-sm">Expiré</span>
-                                        {% endif %}
+        <div class="space-y-lg">
+            {% for group in document_groups %}
+                <!-- En-tête de groupe -->
+                <div class="certificate-group fade-in">
+                    <!-- En-tête avec Entreprise / Adresse / Type -->
+                    <div class="card group-header mb-md">
+                        <div class="card-body">
+                            <div class="flex flex-col md:flex-row md:items-center gap-md">
+                                <div class="flex-1">
+                                    <h4 class="mb-xs">
+                                        <i class="fas fa-building me-sm"></i>
+                                        {{ group.entreprise if group.entreprise else 'Entreprise non spécifiée' }}
+                                    </h4>
+                                    {% if group.adresse %}
+                                        <div class="text-secondary text-sm">
+                                            <i class="fas fa-map-marker-alt me-xs"></i>
+                                            {{ group.adresse }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex items-center gap-md">
+                                    {% if group.norme %}
+                                        <span class="badge badge-primary">
+                                            <i class="fas fa-certificate me-xs"></i>
+                                            {{ group.norme }}
+                                        </span>
+                                    {% endif %}
+                                    <span class="badge badge-info">
+                                        {{ group.documents|length }} certificat(s)
                                     </span>
                                 </div>
-                            {% endif %}
-                            
-                            {% if doc.type %}
-                                <div class="document-field">
-                                    <strong>Norme:</strong> 
-                                    <span class="document-field-value">{{ doc.type }}</span>
-                                </div>
-                            {% endif %}
-                            
-                            <!-- Organisme Certificateur et Nom de l'entreprise depuis les attributs -->
-                            {% if doc.attributes and doc.attributes is mapping %}
-                                {% set societe_cert = doc.attributes.get('societe_certificatrice', '') %}
-                                {% set societe_nom = doc.attributes.get('nom_societe_certifiee', '') %}
-                                
-                                {% if societe_cert %}
-                                    <div class="document-field">
-                                        <strong>Organisme Certificateur:</strong> 
-                                        <span class="document-field-value">{{ societe_cert }}</span>
-                                    </div>
-                                {% endif %}
-                                
-                                {% if societe_nom %}
-                                    <div class="document-field">
-                                        <strong>Nom de l'entreprise:</strong> 
-                                        <span class="document-field-value">{{ societe_nom }}</span>
-                                    </div>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Boutons toujours visibles -->
-                        <div class="flex gap-sm mt-md">
-                            {% if doc.file_path %}
-                                <a href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" 
-                                   target="_blank" 
-                                   class="btn btn-sm btn-secondary">
-                                    <i class="fas fa-external-link-alt"></i> Ouvrir
-                                </a>
-                            {% endif %}
-                            {% if current_user.id == doc.user_id or current_user.role == 'admin' %}
-                                <a href="{{ url_for('delete_document', doc_id=doc.id) }}" 
-                                   class="btn btn-sm btn-danger"
-                                   onclick="return confirm('Etes-vous sûr de vouloir supprimer ce document ?')">
-                                    <i class="fas fa-trash"></i> Supprimer
-                                </a>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Champs dépliables -->
-                        <div class="document-content" id="content-{{ doc.id }}">
-                            <div class="document-extra-info">
-                                <div class="document-field">
-                                    <strong>Auteur:</strong> 
-                                    <span class="document-field-value">{{ doc.username }}</span>
-                                </div>
-                                
-                                {% if doc.content %}
-                                    <div class="document-field">
-                                        <strong>Commentaire:</strong> 
-                                        <span class="document-field-value">{{ doc.content }}</span>
-                                    </div>
-                                {% endif %}
-                                
-                                {% if doc.attributes and doc.attributes is mapping and doc.attributes.get('url_telechargement') %}
-                                    <div class="document-field">
-                                        <strong>URL du site:</strong> 
-                                        <span class="document-field-value">
-                                            <a href="{{ doc.attributes['url_telechargement'] }}" target="_blank">
-                                                {{ doc.attributes['url_telechargement'] }}
-                                            </a>
-                                        </span>
-                                    </div>
-                                {% endif %}
-                                
-                                <!-- Autres attributs -->
-                                {% if doc.type and doc.attributes and doc.attributes is mapping %}
-                                    {% for attr_name, attr_value in doc.attributes.items() %}
-                                        {% if attr_name not in ['societe_certificatrice', 'nom_societe_certifiee', 'url_telechargement'] %}
-                                            <div class="document-field">
-                                                <strong>
-                                                    {% if doc.type in document_types %}
-                                                        {{ document_types[doc.type].attributes[attr_name].label if attr_name in document_types[doc.type].attributes else attr_name }}:
-                                                    {% else %}
-                                                        {{ attr_name }}:
-                                                    {% endif %}
-                                                </strong>
-                                                <span class="document-field-value">{{ attr_value }}</span>
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endif %}
-                                
-                                {% if doc.upload_date %}
-                                    <div class="document-field">
-                                        <strong>Date upload:</strong> 
-                                        <span class="document-field-value">{{ (doc.upload_date|string)[:10] if doc.upload_date else 'N/A' }}</span>
-                                    </div>
-                                {% endif %}
                             </div>
                         </div>
+                    </div>
+                    
+                    <!-- Certificats du groupe (le premier est le plus à jour) -->
+                    <div class="grid grid-cols-1 gap-md">
+                        {% for doc in group.documents %}
+                            <div class="card document-card {% if loop.index == 1 %}certificate-latest border-primary{% endif %}">
+                                <div class="card-body">
+                                    <div class="flex justify-between items-start mb-md">
+                                        <div class="flex-1">
+                                            <h5 class="document-title mb-xs flex items-center gap-sm">
+                                                <i class="fas fa-file-pdf text-danger" style="font-size: 1.2rem;"></i>
+                                                {{ doc.title }}
+                                                {% if loop.index == 1 %}
+                                                    <span class="badge badge-success ms-sm">
+                                                        <i class="fas fa-star me-xs"></i> Dernier
+                                                    </span>
+                                                {% endif %}
+                                            </h5>
+                                            <div class="text-sm text-secondary">
+                                                <span>#{{ doc.id }}</span>
+                                                {% if doc.username %}
+                                                    <span class="ms-md">par {{ doc.username }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-sm">
+                                            {% if doc.file_path %}
+                                                <a href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" 
+                                                   target="_blank" 
+                                                   class="btn btn-sm btn-secondary" title="Ouvrir">
+                                                    <i class="fas fa-external-link-alt"></i>
+                                                </a>
+                                            {% endif %}
+                                            {% if current_user.id == doc.user_id or current_user.role == 'admin' %}
+                                                <a href="{{ url_for('delete_document', doc_id=doc.id) }}" 
+                                                   class="btn btn-sm btn-danger" title="Supprimer"
+                                                   onclick="return confirm('Etes-vous sûr de vouloir supprimer ce certificat ?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Informations principales -->
+                                    <div class="document-main-info">
+                                        <div class="flex flex-col sm:flex-row gap-lg">
+                                            <div class="flex-1">
+                                                {% if doc.date_peremption %}
+                                                    <div class="document-field">
+                                                        <strong>Date de péremption:</strong> 
+                                                        <span class="document-field-value">
+                                                            {{ doc.date_peremption[:10] if doc.date_peremption else 'N/A' }}
+                                                            {% if doc.date_peremption[:10] < current_date[:10] %}
+                                                                <span class="badge badge-danger ms-sm">Expiré</span>
+                                                            {% endif %}
+                                                        </span>
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                {% if doc.attributes and doc.attributes is mapping %}
+                                                    {% set organisme = doc.attributes.get('organisme_certificateur', '') %}
+                                                    {% if organisme %}
+                                                        <div class="document-field">
+                                                            <strong>Organisme Certificateur:</strong> 
+                                                            <span class="document-field-value">{{ organisme }}</span>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-1">
+                                                {% if doc.content %}
+                                                    <div class="document-field">
+                                                        <strong>Commentaire:</strong> 
+                                                        <span class="document-field-value">{{ doc.content[:100] }}{% if doc.content|length > 100 %}...{% endif %}</span>
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                {% if doc.upload_date %}
+                                                    <div class="document-field">
+                                                        <strong>Upload:</strong> 
+                                                        <span class="document-field-value">{{ (doc.upload_date|string)[:10] if doc.upload_date else 'N/A' }}</span>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Historique indicator pour les certificats non-derniers -->
+                                    {% if loop.index > 1 %}
+                                        <div class="mt-md pt-md border-top text-sm text-secondary">
+                                            <i class="fas fa-history me-xs"></i> Certificat historique
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
                 </div>
             {% endfor %}
@@ -397,7 +378,7 @@
         {% if pagination and pagination.pages > 1 %}
             <div class="pagination-controls">
                 <div class="page-info">
-                    <span>Affichage {{ pagination.items|length }} sur {{ pagination.total }} - Page {{ page }} sur {{ pagination.pages }}</span>
+                    <span>Affichage {{ pagination.items|length }} groupes sur {{ pagination.total }} - Page {{ page }} sur {{ pagination.pages }}</span>
                 </div>
                 {% if pagination.has_prev %}
                     <a href="?page={{ pagination.prev_num }}&amp;per_page={{ per_page }}{% for key, value in request.args.items() %}{% if key != 'page' and key != 'per_page' and value %}&amp;{{ key }}={{ value }}{% endif %}{% endfor %}" 
@@ -509,33 +490,38 @@
                         
                         <div class="extracted-fields" id="extracted-fields-container">
                             <div class="extracted-field">
-                                <label for="extracted-organisme">Organisme Certificateur</label>
-                                <input type="text" class="form-control" id="extracted-organisme" name="organisme_certificateur" placeholder="Ex: Bureau Veritas, AFNOR, etc.">
+                                <label for="extracted-organisme">Organisme Certificateur <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="extracted-organisme" name="organisme_certificateur" placeholder="Ex: Bureau Veritas, AFNOR, etc." required>
                             </div>
                             
                             <div class="extracted-field">
-                                <label for="extracted-norme">Type de Norme</label>
-                                <input type="text" class="form-control" id="extracted-norme" name="type_norme" placeholder="Ex: ISO 9001:2015, EN 1090, etc.">
+                                <label for="extracted-norme">Norme <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="extracted-norme" name="norme" placeholder="Ex: ISO 9001:2015, EN 1090, etc." required>
                             </div>
                             
                             <div class="extracted-field">
-                                <label for="extracted-date">Date de péremption</label>
-                                <input type="date" class="form-control" id="extracted-date" name="date_peremption">
+                                <label for="extracted-date">Date de péremption <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="extracted-date" name="date_peremption" required>
                             </div>
                             
                             <div class="extracted-field">
-                                <label for="extracted-entreprise">Entreprise Certifiée</label>
-                                <input type="text" class="form-control" id="extracted-entreprise" name="entreprise_certifiee" placeholder="Nom de l'entreprise">
+                                <label for="extracted-entreprise">Entreprise Certifiée <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="extracted-entreprise" name="entreprise_certifiee" placeholder="Nom de l'entreprise" required>
                             </div>
                             
                             <div class="extracted-field">
-                                <label for="extracted-pays">Pays</label>
-                                <input type="text" class="form-control" id="extracted-pays" name="pays" placeholder="Ex: France, Belgique, etc.">
+                                <label for="extracted-pays">Pays <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="extracted-pays" name="pays" placeholder="Ex: France, Belgique, etc." required>
                             </div>
                             
                             <div class="extracted-field">
-                                <label for="extracted-adresse">Adresse</label>
-                                <textarea class="form-control textarea-control" id="extracted-adresse" name="adresse" placeholder="Adresse complète..." rows="2"></textarea>
+                                <label for="extracted-adresse">Adresse <span class="text-danger">*</span></label>
+                                <textarea class="form-control textarea-control" id="extracted-adresse" name="adresse" placeholder="Adresse complète..." rows="2" required></textarea>
+                            </div>
+                            
+                            <div class="extracted-field">
+                                <label for="extracted-url">URL de téléchargement (optionnel)</label>
+                                <input type="url" class="form-control" id="extracted-url" name="url_telechargement" placeholder="https://exemple.com/certificat.pdf">
                             </div>
                             
                             <div class="extracted-field">
@@ -545,8 +531,8 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="extracted-doc-type">Type de document</label>
-                            <select class="form-control select-control" id="extracted-doc-type" name="doc_type">
+                            <label for="extracted-doc-type">Type de document <span class="text-danger">*</span></label>
+                            <select class="form-control select-control" id="extracted-doc-type" name="doc_type" required>
                                 <option value="">Sélectionnez un type</option>
                                 {% for type_id, type_config in document_types.items() %}
                                     <option value="{{ type_id }}">{{ type_config.name }} - {{ type_config.description }}</option>
@@ -773,11 +759,11 @@
             if (data.title) {
                 document.getElementById('extracted-title').value = data.title;
             }
-            if (data.organisme_certificatrice) {
-                document.getElementById('extracted-organisme').value = data.organisme_certificatrice;
+            if (data.organisme_certificateur) {
+                document.getElementById('extracted-organisme').value = data.organisme_certificateur;
             }
-            if (data.type_norme) {
-                document.getElementById('extracted-norme').value = data.type_norme;
+            if (data.norme) {
+                document.getElementById('extracted-norme').value = data.norme;
             }
             if (data.date_peremption) {
                 document.getElementById('extracted-date').value = data.date_peremption;
@@ -790,6 +776,9 @@
             }
             if (data.adresse) {
                 document.getElementById('extracted-adresse').value = data.adresse;
+            }
+            if (data.url_telechargement) {
+                document.getElementById('extracted-url').value = data.url_telechargement;
             }
             if (data.content) {
                 document.getElementById('extracted-content').value = data.content.substring(0, 500);
@@ -818,8 +807,44 @@
             
             // Valider les champs requis
             const title = document.getElementById('extracted-title').value.trim();
+            const organisme = document.getElementById('extracted-organisme').value.trim();
+            const norme = document.getElementById('extracted-norme').value.trim();
+            const datePeremption = document.getElementById('extracted-date').value.trim();
+            const entreprise = document.getElementById('extracted-entreprise').value.trim();
+            const pays = document.getElementById('extracted-pays').value.trim();
+            const adresse = document.getElementById('extracted-adresse').value.trim();
+            const docType = document.getElementById('extracted-doc-type').value.trim();
+            
             if (!title) {
                 flashMessage('Le titre est obligatoire', 'error');
+                return;
+            }
+            if (!organisme) {
+                flashMessage('L\'organisme certificateur est obligatoire', 'error');
+                return;
+            }
+            if (!norme) {
+                flashMessage('Le type de norme est obligatoire', 'error');
+                return;
+            }
+            if (!datePeremption) {
+                flashMessage('La date de péremption est obligatoire', 'error');
+                return;
+            }
+            if (!entreprise) {
+                flashMessage('L\'entreprise certifiée est obligatoire', 'error');
+                return;
+            }
+            if (!pays) {
+                flashMessage('Le pays est obligatoire', 'error');
+                return;
+            }
+            if (!adresse) {
+                flashMessage('L\'adresse est obligatoire', 'error');
+                return;
+            }
+            if (!docType) {
+                flashMessage('Le type de document est obligatoire', 'error');
                 return;
             }
             
@@ -831,15 +856,14 @@
             const jsonData = {
                 title: title,
                 content: document.getElementById('extracted-content').value,
-                validity_date: document.getElementById('extracted-date').value,
                 doc_type: document.getElementById('extracted-doc-type').value,
                 organisme_certificateur: document.getElementById('extracted-organisme').value,
-                type_norme: document.getElementById('extracted-norme').value,
+                norme: document.getElementById('extracted-norme').value,
                 date_peremption: document.getElementById('extracted-date').value,
                 entreprise_certifiee: document.getElementById('extracted-entreprise').value,
                 pays: document.getElementById('extracted-pays').value,
                 adresse: document.getElementById('extracted-adresse').value,
-                url_telechargement: '',
+                url_telechargement: document.getElementById('extracted-url').value,
                 product_ids: Array.from(document.getElementById('extracted-product-ids').selectedOptions).map(opt => opt.value)
             };
             

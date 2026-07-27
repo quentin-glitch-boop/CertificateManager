@@ -34,9 +34,7 @@ class TestDocumentCreation:
 
     def test_add_document_missing_title(self, logged_in_client):
         """Adding document without title should fail"""
-        response = logged_in_client.post(
-            "/add", data={"title": "", "content": "Contenu"}, follow_redirects=True
-        )
+        response = logged_in_client.post("/add", data={"title": "", "content": "Contenu"}, follow_redirects=True)
         # Should show error about required title
         assert (
             b"titre est obligatoire" in response.data
@@ -67,10 +65,7 @@ class TestUserManagement:
         response = admin_client.get("/admin/users")
         assert response.status_code == 200
         # Check for user management content
-        assert (
-            b"Gestion des Utilisateurs" in response.data
-            or b"Utilisateurs" in response.data
-        )
+        assert b"Gestion des Utilisateurs" in response.data or b"Utilisateurs" in response.data
 
     def test_admin_users_page_requires_admin(self, logged_in_client):
         """Admin users page requires admin role"""
@@ -92,9 +87,7 @@ class TestUserManagement:
         )
         assert response.status_code == 200
         assert (
-            b"Utilisateur ajoute" in response.data
-            or b"ajoute" in response.data
-            or b"success" in response.data.lower()
+            b"Utilisateur ajoute" in response.data or b"ajoute" in response.data or b"success" in response.data.lower()
         )
 
     def test_add_user_duplicate_username(self, admin_client):
@@ -105,10 +98,7 @@ class TestUserManagement:
             follow_redirects=True,
         )
         # Should show error about duplicate username
-        assert (
-            b"existe deja" in response.data.lower()
-            or b"existe" in response.data.lower()
-        )
+        assert b"existe deja" in response.data.lower() or b"existe" in response.data.lower()
 
     def test_add_user_short_password(self, admin_client):
         """Short password should be rejected"""

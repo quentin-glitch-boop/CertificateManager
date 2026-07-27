@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Statut Vérifications Certificats - CertiFlow{% endblock %}
+{% block breadcrumb_title %}Statut Vérifications{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="card mb-lg">
+                <div class="card-header d-flex justify-between align-center">
+                    <h3><i class="fas fa-list-check me-md"></i> Statut des vérifications</h3>
+                    <a href="{{ url_for('admin_certificate_check_config') }}" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-cog me-xs"></i> Configuration
+                    </a>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary mb-lg">
+                        Liste des certificats avec une URL de téléchargement et leur statut de vérification.
+                    </p>
+                    
+                    {% if documents|length == 0 %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-sm"></i>
+                            Aucun certificat avec une URL de téléchargement n'a été trouvé.
+                        </div>
+                    {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Titre</th>
+                                        <th>URL</th>
+                                        <th>Dernière vérification</th>
+                                        <th>Statut</th>
+                                        <th>Vérifications</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for doc_status in documents %}
+                                        <tr>
+                                            <td><span class="badge badge-primary">#{{ doc_status.doc.id }}</span></td>
+                                            <td>
+                                                <strong>{{ doc_status.doc.title }}</strong>
+                                                {% if doc_status.doc.type %}
+                                                    <div class="text-sm text-secondary">{{ doc_status.doc.type }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ doc_status.url }}" target="_blank" class="text-primary">
+                                                    <i class="fas fa-external-link-alt me-xs"></i>
+                                                    {{ doc_status.url[:50] }}{% if doc_status.url|length > 50 %}...{% endif %}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                {% if doc_status.last_checked %}
+                                                    {{ doc_status.last_checked[:10] if doc_status.last_checked|length > 10 else doc_status.last_checked }}
+                                                    <br>
+                                                    <small class="text-secondary">{{ doc_status.last_checked[11:16] if doc_status.last_checked|length > 16 else '' }}</small>
+                                                {% else %}
+                                                    <span class="text-muted">Jamais</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if not doc_status.last_checked %}
+                                                    <span class="badge badge-secondary">Non vérifié</span>
+                                                {% elif doc_status.check_history|length == 0 %}
+                                                    <span class="badge badge-info">Nouveau</span>
+                                                {% else %}
+                                                    {% set last_entry = doc_status.check_history[-1] %}
+                                                    {% if last_entry.status == 'changed' %}
+                                                        <span class="badge badge-danger">
+                                                            <i class="fas fa-exclamation-circle me-xs"></i> Modifié
+                                                        </span>
+                                                    {% elif last_entry.status == 'unchanged' %}
+                                                        <span class="badge badge-success">
+                                                            <i class="fas fa-check-circle me-xs"></i> À jour
+                                                        </span>
+                                                    {% elif last_entry.status == 'new' %}
+                                                        <span class="badge badge-info">
+                                                            <i class="fas fa-plus-circle me-xs"></i> Nouveau
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge badge-warning">{{ last_entry.status }}</span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-light">{{ doc_status.check_count }} vérif.</span>
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('admin_certificate_check_status') }}?doc_id={{ doc_status.doc.id }}" 
+                                                   class="btn btn-sm btn-secondary" title="Détails">
+                                                    <i class="fas fa-search"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

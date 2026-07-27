@@ -19,12 +19,12 @@ def test_app_context_and_db_init():
     with app.app_context():
         # Initialize database
         init_db()
-        
+
         # Check that tables exist by querying them
         # This will raise an exception if tables don't exist
         user_count = UserDB.query.count()
         doc_count = DocumentDB.query.count()
-        
+
         # Tables exist if we can query them
         assert True
 
@@ -46,9 +46,7 @@ def test_routes_are_registered():
 
     for route in expected_routes:
         found = any(route in r for r in routes)
-        assert (
-            found
-        ), f"Route {route} not found in registered routes. Available: {routes}"
+        assert found, f"Route {route} not found in registered routes. Available: {routes}"
 
 
 def test_upload_folder_exists():

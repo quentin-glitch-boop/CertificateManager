@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - CertiFlow{% endblock %}
+
+{% block breadcrumb_title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ product.name }}</h1>
+    <p>{{ product.description or '-' }}</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>{{ t('documents_in_product') }} ({{ product.documents|length }})</h2>
+        <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn btn-secondary">
+            <i class="fas fa-edit"></i> {{ t('edit') }}
+        </a>
+    </div>
+    <div class="card-body">
+        {% if product.documents|length > 0 %}
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>{{ t('title') }}</th>
+                        <th>{{ t('type') }}</th>
+                        <th>{{ t('validity_date') }}</th>
+                        <th>{{ t('upload_date') }}</th>
+                        <th>{{ t('actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in product.documents %}
+                    <tr>
+                        <td>{{ doc.title }}</td>
+                        <td>{{ doc.type or '-' }}</td>
+                        <td>{{ doc.validity_date.strftime('%d/%m/%Y') if doc.validity_date else t('n_a') }}</td>
+                        <td>{{ doc.upload_date.strftime('%d/%m/%Y') if doc.upload_date else t('n_a') }}</td>
+                        <td class="table-actions">
+                            <a href="{{ url_for('view_document', document_id=doc.id) }}" 
+                               class="btn btn-sm btn-info" title="Voir">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('remove_document_from_product', product_id=product.id, document_id=doc.id) }}" 
+                               class="btn btn-sm btn-danger" 
+                               onclick="return confirm('Retirer ce document du produit ?')" 
+                               title="Retirer">
+                                <i class="fas fa-unlink"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            {{ t('no_documents_for_product') }}
+        </div>
+        <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> {{ t('associate_documents') }}
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-lg">
+    <a href="{{ url_for('my_products') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Retour à la liste des produits
+    </a>
+</div>
+{% endblock %}

@@ -8,6 +8,7 @@ TRANSLATIONS = {
         "welcome": "Accueil",
         "my_documents": "Mes Documents",
         "home": "Accueil",
+        "language": "Langue",
         "add": "Ajouter",
         "add_document": "Ajouter un document",
         "search": "Rechercher",
@@ -101,6 +102,12 @@ TRANSLATIONS = {
         "operations_dashboard": "Tableau de bord",
         "dashboard_subtitle": "Visualisez et analysiez vos certificats",
         "customize": "Personnaliser",
+        "finish": "Terminer",
+        "manage_products": "Gérer les produits",
+        # General
+        "welcome": "Bienvenue sur",
+        "centralized_management": "Gestion centralisée de vos certificats et documents",
+        "main_features": "Fonctionnalités principales",
         "configurations": "Configurations",
         "current_config": "Configuration actuelle",
         "default_config": "Par défaut",
@@ -114,6 +121,25 @@ TRANSLATIONS = {
         "configure_widget": "Configurer le widget",
         "config_saved": "Configuration enregistrée !",
         "operations": "Opérations",
+        # Products
+        "products": "Produits",
+        "my_products": "Mes Produits",
+        "product": "Produit",
+        "add_product": "Ajouter un produit",
+        "edit_product": "Modifier le produit",
+        "delete_product": "Supprimer le produit",
+        "product_name": "Nom du produit",
+        "product_description": "Description du produit",
+        "select_product": "Sélectionner un produit",
+        "all_products": "Tous les produits",
+        "no_products": "Aucun produit trouvé",
+        "no_documents_for_product": "Aucun document pour ce produit",
+        "associate_documents": "Associer des documents",
+        "product_created": "Produit créé avec succès !",
+        "product_updated": "Produit mis à jour avec succès !",
+        "product_deleted": "Produit supprimé avec succès !",
+        "are_you_sure_delete_product": "Êtes-vous sûr de vouloir supprimer ce produit ?",
+        "documents_in_product": "Documents dans ce produit",
     },
     "en": {
         "app_title": "Document Management",
@@ -122,6 +148,7 @@ TRANSLATIONS = {
         "welcome": "Home",
         "my_documents": "My Documents",
         "home": "Home",
+        "language": "Language",
         "add": "Add",
         "add_document": "Add a document",
         "search": "Search",
@@ -215,6 +242,12 @@ TRANSLATIONS = {
         "operations_dashboard": "Dashboard",
         "dashboard_subtitle": "Visualize and analyze your certificates",
         "customize": "Customize",
+        "finish": "Finish",
+        "manage_products": "Manage products",
+        # General
+        "welcome": "Welcome to",
+        "centralized_management": "Centralized management of your certificates and documents",
+        "main_features": "Main Features",
         "configurations": "Configurations",
         "current_config": "Current configuration",
         "default_config": "Default",
@@ -228,6 +261,25 @@ TRANSLATIONS = {
         "configure_widget": "Configure Widget",
         "config_saved": "Configuration saved!",
         "operations": "Operations",
+        # Products
+        "products": "Products",
+        "my_products": "My Products",
+        "product": "Product",
+        "add_product": "Add a product",
+        "edit_product": "Edit product",
+        "delete_product": "Delete product",
+        "product_name": "Product Name",
+        "product_description": "Product Description",
+        "select_product": "Select a product",
+        "all_products": "All products",
+        "no_products": "No products found",
+        "no_documents_for_product": "No documents for this product",
+        "associate_documents": "Associate documents",
+        "product_created": "Product created successfully!",
+        "product_updated": "Product updated successfully!",
+        "product_deleted": "Product deleted successfully!",
+        "are_you_sure_delete_product": "Are you sure you want to delete this product?",
+        "documents_in_product": "Documents in this product",
     },
 }
 
@@ -244,16 +296,26 @@ def get_translation(key, lang=None):
 
 
 def get_current_language():
-    from flask import session, request
+    from flask import session, request, current_app
 
-    if "language" in session:
-        return session["language"]
-    if request and hasattr(request, "cookies") and "language" in request.cookies:
-        return request.cookies.get("language", DEFAULT_LANGUAGE)
-    if request and hasattr(request, "accept_languages"):
-        for lang in request.accept_languages:
-            if lang in TRANSLATIONS:
-                return lang
+    try:
+        # Essayer d'obtenir la langue depuis la session
+        if "language" in session:
+            return session["language"]
+
+        # Essayer depuis les cookies
+        if request and hasattr(request, "cookies") and "language" in request.cookies:
+            return request.cookies.get("language", DEFAULT_LANGUAGE)
+
+        # Essayer depuis les langues acceptées par le navigateur
+        if request and hasattr(request, "accept_languages"):
+            for lang in request.accept_languages:
+                if lang in TRANSLATIONS:
+                    return lang
+    except (RuntimeError, KeyError):
+        # Si session ou request n'est pas disponible, retourner la langue par défaut
+        pass
+
     return DEFAULT_LANGUAGE
 
 

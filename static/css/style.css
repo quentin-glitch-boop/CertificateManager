@@ -283,6 +283,121 @@ img {
     display: flex;
     align-items: center;
     gap: var(--spacing-lg);
+    position: relative;
+}
+
+/* User dropdown menu */
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    position: relative;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    background: var(--primary);
+    color: var(--text-white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: var(--spacing-xs);
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    min-width: 200px;
+    max-width: 250px;
+    z-index: 1000;
+    overflow: hidden;
+    display: none;
+}
+
+.user-dropdown.show {
+    display: block;
+}
+
+.user-dropdown hr {
+    margin: 0;
+    border: none;
+    border-top: 1px solid var(--border-light);
+}
+
+.user-info {
+    padding: var(--spacing-md);
+    background: var(--background);
+}
+
+.user-info div:first-child {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.user-info-role {
+    font-size: var(--font-size-sm);
+    color: var(--text-light);
+    margin-top: var(--spacing-xs);
+}
+
+.user-info .badge {
+    display: inline-block;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--primary-light);
+    color: var(--text-white);
+    border-radius: 20px;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+}
+
+/* Language selector in dropdown */
+.user-dropdown .lang-selector {
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.user-dropdown .lang-selector > div:first-child {
+    font-size: var(--font-size-sm);
+    color: var(--text-light);
+    margin-bottom: var(--spacing-xs);
+    font-weight: 600;
+}
+
+.user-dropdown a {
+    display: block;
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+}
+
+.user-dropdown a:hover {
+    background: var(--background);
+}
+
+.user-dropdown a.active-lang {
+    background: var(--primary-light);
+    color: var(--text-white);
+    font-weight: 600;
+}
+
+.user-dropdown a i.fa-check-circle {
+    margin-right: var(--spacing-sm);
+    color: var(--primary);
+}
+
+.user-dropdown a i {
+    margin-right: var(--spacing-sm);
 }
 
 .search-box {

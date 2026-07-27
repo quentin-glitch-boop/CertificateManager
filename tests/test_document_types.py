@@ -88,9 +88,7 @@ class TestDocumentTypes:
             "file": (io.BytesIO(pdf_content), "test_cert.pdf"),
         }
 
-        response = logged_in_client.post(
-            "/add", data=data, content_type="multipart/form-data", follow_redirects=True
-        )
+        response = logged_in_client.post("/add", data=data, content_type="multipart/form-data", follow_redirects=True)
 
         assert response.status_code == 200
         assert b"Document" in response.data and b"succ" in response.data.lower()
@@ -101,7 +99,7 @@ class TestDocumentTypes:
 
         with current_app.app_context():
             doc = DocumentDB.query.filter_by(title="Test Certificate Full").first()
-            
+
             assert doc is not None
             assert doc.type == "certificat"
             attrs = json.loads(doc.attributes) if doc.attributes else {}

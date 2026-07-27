@@ -87,12 +87,8 @@ class UserDB(db.Model):
     created_at = db.Column(db.DateTime, server_default=func.now())
 
     # Relationships
-    documents = db.relationship(
-        "DocumentDB", backref="owner", lazy=True, cascade="all, delete-orphan"
-    )
-    dashboard_configs = db.relationship(
-        "DashboardConfigDB", backref="user", lazy=True, cascade="all, delete-orphan"
-    )
+    documents = db.relationship("DocumentDB", backref="owner", lazy=True, cascade="all, delete-orphan")
+    dashboard_configs = db.relationship("DashboardConfigDB", backref="user", lazy=True, cascade="all, delete-orphan")
 
 
 class DocumentDB(db.Model):
@@ -105,7 +101,6 @@ class DocumentDB(db.Model):
     content = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     upload_date = db.Column(db.DateTime, server_default=func.now())
-    validity_date = db.Column(db.Date)
     file_path = db.Column(db.String(255))
     type = db.Column(db.String(50))
     attributes = db.Column(db.Text)
@@ -125,14 +120,13 @@ class DashboardConfigDB(db.Model):
     created_at = db.Column(db.DateTime, server_default=func.now())
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
 
-    __table_args__ = (
-        db.UniqueConstraint("user_id", "config_name", name="uq_user_config"),
-    )
+    __table_args__ = (db.UniqueConstraint("user_id", "config_name", name="uq_user_config"),)
 
 
 # ============================================================================
 # Product Models - User-specific products and their document relationships
 # ============================================================================
+
 
 class ProductDB(db.Model):
     """SQLAlchemy model for user products table"""
@@ -149,15 +143,10 @@ class ProductDB(db.Model):
     # Relationships
     user = db.relationship("UserDB", backref="products")
     documents = db.relationship(
-        "DocumentDB", 
-        secondary="product_document",
-        backref=db.backref("products", lazy=True),
-        lazy=True
+        "DocumentDB", secondary="product_document", backref=db.backref("products", lazy=True), lazy=True
     )
 
-    __table_args__ = (
-        db.UniqueConstraint("user_id", "name", name="uq_user_product_name"),
-    )
+    __table_args__ = (db.UniqueConstraint("user_id", "name", name="uq_user_product_name"),)
 
 
 class ProductDocumentDB(db.Model):
@@ -169,9 +158,7 @@ class ProductDocumentDB(db.Model):
     document_id = db.Column(db.Integer, db.ForeignKey("documents.id"), primary_key=True)
     created_at = db.Column(db.DateTime, server_default=func.now())
 
-    __table_args__ = (
-        db.UniqueConstraint("product_id", "document_id", name="uq_product_document"),
-    )
+    __table_args__ = (db.UniqueConstraint("product_id", "document_id", name="uq_product_document"),)
 
 
 class GeocodeCacheDB(db.Model):
@@ -195,9 +182,7 @@ class GeocodeCacheDB(db.Model):
 app = Flask(__name__)
 
 # Load secret key from environment or use default
-app.secret_key = os.environ.get(
-    "SECRET_KEY", "ta_cle_secrete_ic123456_changez_la_en_production"
-)
+app.secret_key = os.environ.get("SECRET_KEY", "ta_cle_secrete_ic123456_changez_la_en_production")
 
 # Configure SQLAlchemy
 DATABASE_URL = os.environ.get(
@@ -216,13 +201,52 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
 # Configuration
-UPLOAD_FOLDER = os.environ.get(
-    "UPLOAD_FOLDER", os.path.join(os.path.dirname(__file__), "static", "uploads")
-)
+UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", os.path.join(os.path.dirname(__file__), "static", "uploads"))
 ALLOWED_EXTENSIONS = {"pdf"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # Limite à 16 Mo
+
+
+# ============================================================================
+# APScheduler Setup for Certificate Auto-Check
+# ============================================================================
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.interval import IntervalTrigger
+    from certificate_checker import check_all_documents
+
+    # Initialize scheduler
+    scheduler = BackgroundScheduler()
+
+    # Configuration de la fréquence (en heures, par défaut 168 = 1 semaine)
+    CHECK_FREQUENCY_HOURS = int(os.environ.get("CHECK_FREQUENCY_HOURS", 168))
+
+    # Add the job
+    scheduler.add_job(
+        func=check_all_documents,
+        trigger=IntervalTrigger(hours=CHECK_FREQUENCY_HOURS),
+        id="certificate_auto_check",
+        name="Vérification automatique des certificats",
+        replace_existing=True,
+    )
+
+    # Start the scheduler
+    scheduler.start()
+
+    # Store scheduler in app context for access in routes
+    app.scheduler = scheduler
+
+    @app.teardown_appcontext
+    def shutdown_scheduler(exception=None):
+        """Shutdown scheduler when app context ends"""
+        if hasattr(app, "scheduler"):
+            app.scheduler.shutdown()
+
+except ImportError as e:
+    # APScheduler not available, auto-check disabled
+    print(f"Warning: APScheduler not available, auto-check disabled: {e}")
+    app.scheduler = None
 
 
 # ============================================================================
@@ -377,16 +401,12 @@ def validate_document_attributes(type_name, attributes):
                 try:
                     datetime.strptime(value, "%Y-%m-%d")
                 except ValueError:
-                    errors.append(
-                        f"{attr_schema[attr_name]['label']} doit etre une date valide (YYYY-MM-DD)"
-                    )
+                    errors.append(f"{attr_schema[attr_name]['label']} doit etre une date valide (YYYY-MM-DD)")
             elif expected_type == "number" and value:
                 try:
                     float(value)
                 except ValueError:
-                    errors.append(
-                        f"{attr_schema[attr_name]['label']} doit etre un nombre"
-                    )
+                    errors.append(f"{attr_schema[attr_name]['label']} doit etre un nombre")
 
     return len(errors) == 0, errors
 
@@ -418,9 +438,7 @@ def init_db():
             db.session.commit()
 
         # Mettre à jour les utilisateurs existants sans password
-        users_without_pass = UserDB.query.filter(
-            or_(UserDB.password.is_(None), UserDB.password == "")
-        ).all()
+        users_without_pass = UserDB.query.filter(or_(UserDB.password.is_(None), UserDB.password == "")).all()
 
         for user in users_without_pass:
             # Générer un mot de passe par défaut (username + '123')
@@ -488,9 +506,7 @@ def geocode_address(address, use_cache=True):
 
     # Normaliser l'adresse (minuscules, sans accents)
     normalized_addr = unicodedata.normalize("NFKD", address.lower())
-    normalized_addr = "".join(
-        c for c in normalized_addr if not unicodedata.combining(c)
-    )
+    normalized_addr = "".join(c for c in normalized_addr if not unicodedata.combining(c))
 
     # Vérifier le cache d'abord
     if use_cache:
@@ -597,9 +613,7 @@ def _save_to_geocode_cache(address, latitude, longitude):
             cache_entry.longitude = longitude
             cache_entry.accessed_at = func.now()
         else:
-            cache_entry = GeocodeCacheDB(
-                address=address, latitude=latitude, longitude=longitude
-            )
+            cache_entry = GeocodeCacheDB(address=address, latitude=latitude, longitude=longitude)
             db.session.add(cache_entry)
         db.session.commit()
     except Exception as e:
@@ -689,9 +703,7 @@ def get_user_dashboard_config(user_id, config_name="default"):
     Si elle n'existe pas, crée et retourne la configuration par défaut.
     """
     # Try to find existing config
-    config_db = DashboardConfigDB.query.filter_by(
-        user_id=user_id, config_name=config_name
-    ).first()
+    config_db = DashboardConfigDB.query.filter_by(user_id=user_id, config_name=config_name).first()
 
     if config_db:
         config = {
@@ -719,9 +731,7 @@ def get_user_dashboard_config(user_id, config_name="default"):
 def save_user_dashboard_config(user_id, config_name, config):
     """Sauvegarde la configuration du dashboard pour un utilisateur"""
     # Check if config exists
-    config_db = DashboardConfigDB.query.filter_by(
-        user_id=user_id, config_name=config_name
-    ).first()
+    config_db = DashboardConfigDB.query.filter_by(user_id=user_id, config_name=config_name).first()
 
     if config_db:
         # Update existing
@@ -760,9 +770,7 @@ def get_user_dashboard_configs(user_id):
     # Query all configs for this user
     configs = (
         DashboardConfigDB.query.filter_by(user_id=user_id)
-        .order_by(
-            desc(DashboardConfigDB.is_default), desc(DashboardConfigDB.updated_at)
-        )
+        .order_by(desc(DashboardConfigDB.is_default), desc(DashboardConfigDB.updated_at))
         .all()
     )
 
@@ -810,18 +818,17 @@ def _prepare_timeline_data(documents):
     timeline_data = defaultdict(list)
 
     for doc in documents:
-        if doc["validity_date"]:
-            # Utiliser la date de validité
-            date_key = doc["validity_date"]
+        date_peremption = doc["attributes"].get("date_peremption", "")
+        if date_peremption:
+            # Utiliser la date de péremption
+            date_key = date_peremption
             timeline_data[date_key].append(
                 {
                     "id": doc["id"],
                     "title": doc["title"],
-                    "societe": doc["attributes"].get(
-                        "nom_societe_certifiee", "Inconnue"
-                    ),
-                    "is_expired": doc["validity_date"] < str(date.today()),
-                    "validity_date": doc["validity_date"],
+                    "societe": doc["attributes"].get("entreprise_certifiee", "Inconnue"),
+                    "is_expired": date_peremption < str(date.today()),
+                    "date_peremption": date_peremption,
                 }
             )
 
@@ -861,9 +868,8 @@ def _prepare_map_data(documents):
             lon = attrs["_longitude"]
 
             if lat is not None and lon is not None:
-                is_expired = doc["validity_date"] and doc["validity_date"] < str(
-                    date.today()
-                )
+                date_peremption = attrs.get("date_peremption", "")
+                is_expired = date_peremption and date_peremption < str(date.today())
 
                 features.append(
                     {
@@ -871,11 +877,11 @@ def _prepare_map_data(documents):
                         "properties": {
                             "id": doc["id"],
                             "title": doc["title"],
-                            "societe": attrs.get("nom_societe_certifiee", "Inconnue"),
+                            "societe": attrs.get("entreprise_certifiee", "Inconnue"),
                             "adresse": attrs.get("adresse", ""),
-                            "validity_date": doc["validity_date"] or "",
+                            "date_peremption": date_peremption or "",
                             "is_expired": is_expired,
-                            "certificatrice": attrs.get("societe_certificatrice", ""),
+                            "organisme_certificateur": attrs.get("organisme_certificateur", ""),
                         },
                         "geometry": {
                             "type": "Point",
@@ -895,18 +901,18 @@ def _prepare_stats_data(documents):
     expired = sum(
         1
         for d in documents
-        if d["validity_date"] and d["validity_date"] < str(date.today())
+        if d["attributes"].get("date_peremption", "") and d["attributes"]["date_peremption"] < str(date.today())
     )
     valid = total - expired
 
     # Par type de certificat
     type_counter = Counter(d["type"] for d in documents if d["type"])
 
-    # Par société certificatrice
+    # Par organisme certificateur
     certificatrice_counter = Counter(
-        d["attributes"].get("societe_certificatrice", "Inconnue")
+        d["attributes"].get("organisme_certificateur", "Inconnue")
         for d in documents
-        if d["attributes"].get("societe_certificatrice")
+        if d["attributes"].get("organisme_certificateur")
     )
 
     return {
@@ -927,25 +933,27 @@ def _prepare_alerts_data(documents):
     alerts = []
 
     for doc in documents:
-        if doc["validity_date"]:
-            validity = datetime.strptime(doc["validity_date"], "%Y-%m-%d").date()
-            days_until_expiry = (validity - today).days
+        date_peremption_str = doc["attributes"].get("date_peremption", "")
+        if date_peremption_str:
+            try:
+                validity = datetime.strptime(date_peremption_str, "%Y-%m-%d").date()
+                days_until_expiry = (validity - today).days
 
-            if days_until_expiry < 30 or validity < today:
-                alerts.append(
-                    {
-                        "id": doc["id"],
-                        "title": doc["title"],
-                        "societe": doc["attributes"].get(
-                            "nom_societe_certifiee", "Inconnue"
-                        ),
-                        "validity_date": doc["validity_date"],
-                        "days_remaining": days_until_expiry,
-                        "is_expired": validity < today,
-                        "type": doc["type"],
-                        "username": doc["username"],
-                    }
-                )
+                if days_until_expiry < 30 or validity < today:
+                    alerts.append(
+                        {
+                            "id": doc["id"],
+                            "title": doc["title"],
+                            "societe": doc["attributes"].get("entreprise_certifiee", "Inconnue"),
+                            "date_peremption": date_peremption_str,
+                            "days_remaining": days_until_expiry,
+                            "is_expired": validity < today,
+                            "type": doc["type"],
+                            "username": doc["username"],
+                        }
+                    )
+            except ValueError:
+                pass
 
     # Trier par date de péremption (les plus proches d'abord)
     alerts.sort(key=lambda x: x["days_remaining"])
@@ -966,9 +974,9 @@ def get_all_documents_for_user(user_id=None, user_role=None):
     """
     # Build query based on user role
     if user_role == "admin":
-        documents_query = DocumentDB.query.join(
-            UserDB, DocumentDB.user_id == UserDB.id
-        ).order_by(DocumentDB.upload_date.desc())
+        documents_query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).order_by(
+            DocumentDB.upload_date.desc()
+        )
     else:
         documents_query = (
             DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id)
@@ -1001,7 +1009,6 @@ def get_all_documents_for_user(user_id=None, user_role=None):
                 "title": doc.title,
                 "content": doc.content,
                 "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
-                "validity_date": str(doc.validity_date) if doc.validity_date else None,
                 "file_path": doc.file_path,
                 "type": doc.type,
                 "attributes": attrs,
@@ -1033,12 +1040,12 @@ def inject_global_vars():
         def get_current_lang():
             # Retourne la langue actuelle (utilisée dans les templates)
             return get_current_language()
-        
+
         def translate_function(key):
             # Appeler get_current_language() à chaque fois pour avoir la langue la plus récente
             current_lang = get_current_lang()
             return get_translation(key, current_lang)
-        
+
         return {
             "current_lang": get_current_lang(),
             "available_languages": AVAILABLE_LANGUAGES,
@@ -1102,16 +1109,13 @@ def home():
 def documents():
     """Page avec la liste des documents et la recherche"""
     # Récupérer les critères de recherche et pagination
-    search_author = request.args.get("author", "")
-    search_upload_from = request.args.get("upload_from", "")
-    search_upload_to = request.args.get("upload_to", "")
-    search_validity_from = request.args.get("validity_from", "")
-    search_validity_to = request.args.get("validity_to", "")
-    search_type = request.args.get("doc_type", "")
+    search_entreprise = request.args.get("entreprise", "").strip()
+    search_adresse = request.args.get("adresse", "").strip()
+    search_norme = request.args.get("norme", "").strip()
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
 
-    # Construire la requête SQLAlchemy
+    # Construire la requête SQLAlchemy de base
     if current_user.role == "admin":
         query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id)
     else:
@@ -1119,35 +1123,18 @@ def documents():
             DocumentDB.user_id == current_user.id
         )
 
-    # Ajouter les filtres de recherche
-    if search_author:
-        query = query.filter(UserDB.username.ilike(f"%{search_author}%"))
+    # Filtrer par norme (doc.type) si norme est fourni
+    if search_norme:
+        query = query.filter(DocumentDB.type.ilike(f"%{search_norme}%"))
 
-    if search_upload_from:
-        query = query.filter(func.date(DocumentDB.upload_date) >= search_upload_from)
+    # Récupérer tous les documents correspondant aux filtres de base
+    filtered_docs = query.all()
 
-    if search_upload_to:
-        query = query.filter(func.date(DocumentDB.upload_date) <= search_upload_to)
+    # Filtrer par entreprise et adresse (qui sont dans les attributs JSON)
+    # et regrouper par entreprise -> adresse -> type de norme
+    grouped_documents = {}
 
-    if search_validity_from:
-        query = query.filter(DocumentDB.validity_date >= search_validity_from)
-
-    if search_validity_to:
-        query = query.filter(DocumentDB.validity_date <= search_validity_to)
-
-    if search_type:
-        query = query.filter(DocumentDB.type == search_type)
-
-    # Tri
-    query = query.order_by(DocumentDB.upload_date.desc())
-
-    # Pagination
-    paginated_documents = query.paginate(page=page, per_page=per_page, error_out=False)
-    documents = paginated_documents.items
-
-    # Parser les attributs JSON et ajouter les coordonnées
-    docs_with_attrs = []
-    for doc in documents:
+    for doc in filtered_docs:
         attrs = {}
         if doc.attributes:
             try:
@@ -1155,36 +1142,100 @@ def documents():
             except:
                 attrs = {}
 
+        # Récupérer les valeurs des attributs
+        entreprise = attrs.get("entreprise_certifiee", "")
+        adresse = attrs.get("adresse", "")
+        norme = doc.type or attrs.get("norme", "")
+
+        # Appliquer les filtres sur les attributs
+        if search_entreprise and search_entreprise.lower() not in entreprise.lower():
+            continue
+        if search_adresse and search_adresse.lower() not in adresse.lower():
+            continue
+
+        # Créer la clé de regroupement : entreprise -> adresse -> norme
+        group_key = (entreprise, adresse, norme)
+
+        if group_key not in grouped_documents:
+            grouped_documents[group_key] = []
+
         # Ajouter les coordonnées géographiques si adresse présente
-        if "adresse" in attrs and attrs["adresse"]:
-            lat, lon = geocode_address(attrs["adresse"])
+        if adresse:
+            lat, lon = geocode_address(adresse)
             attrs["_latitude"] = lat
             attrs["_longitude"] = lon
 
         # Convert dates to strings for template compatibility
         upload_date_str = doc.upload_date.isoformat() if doc.upload_date else None
-        validity_date_str = str(doc.validity_date) if doc.validity_date else None
+        date_peremption = attrs.get("date_peremption", "")
 
-        docs_with_attrs.append(
+        grouped_documents[group_key].append(
             {
                 "id": doc.id,
                 "title": doc.title,
                 "content": doc.content,
                 "upload_date": upload_date_str,
-                "validity_date": validity_date_str,
+                "date_peremption": date_peremption,
                 "file_path": doc.file_path,
                 "type": doc.type,
                 "username": doc.owner.username,
                 "attributes": attrs,
+                "entreprise": entreprise,
+                "adresse": adresse,
+                "norme": norme,
             }
         )
 
+    # Trier chaque groupe par date de péremption décroissante (le plus récent en premier)
+    for group_key in grouped_documents:
+        grouped_documents[group_key].sort(
+            key=lambda x: (x["date_peremption"] is None or x["date_peremption"] == "", x["date_peremption"]),
+            reverse=True,
+        )
+
+    # Convertir en liste de groupes triés par entreprise, puis adresse, puis norme
+    sorted_groups = []
+    for (entreprise, adresse, norme), docs in grouped_documents.items():
+        sorted_groups.append({"entreprise": entreprise, "adresse": adresse, "norme": norme, "documents": docs})
+
+    # Trier les groupes par entreprise, puis adresse, puis norme
+    sorted_groups.sort(key=lambda x: (x["entreprise"], x["adresse"], x["norme"]))
+
+    # Pagination manuelle sur les groupes
+    total_groups = len(sorted_groups)
+    total_items = sum(len(g["documents"]) for g in sorted_groups)
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    paginated_groups = sorted_groups[start_idx:end_idx]
+
+    # Créer un objet de pagination simple
+    import math
+
+    total_pages = max(1, math.ceil(total_groups / per_page))
+
+    class SimplePagination:
+        def __init__(self, page, per_page, total, items, total_items):
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.items = items
+            self.pages = total_pages
+            self.has_prev = page > 1
+            self.has_next = page < total_pages
+            self.prev_num = page - 1 if page > 1 else None
+            self.next_num = page + 1 if page < total_pages else None
+            self.total_items = total_items
+
+    paginated_documents = SimplePagination(
+        page=page, per_page=per_page, total=total_groups, items=paginated_groups, total_items=total_items
+    )
+
     # Récupérer les produits de l'utilisateur pour le sélecteur
     user_products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
-    
+
     return render_template(
         "index.html",
-        documents=docs_with_attrs,
+        document_groups=paginated_groups,
         current_user=current_user,
         document_types=get_document_types(),
         current_date=date.today().isoformat(),
@@ -1192,6 +1243,9 @@ def documents():
         pagination=paginated_documents,
         page=page,
         per_page=per_page,
+        search_entreprise=search_entreprise,
+        search_adresse=search_adresse,
+        search_norme=search_norme,
     )
 
 
@@ -1245,7 +1299,7 @@ def set_language_route(lang):
             # Store in session
             session["language"] = lang
             # Create response with cookie
-            next_url = request.args.get('next', url_for('documents'))
+            next_url = request.args.get("next", url_for("documents"))
             resp = make_response(redirect(next_url, code=303))  # 303 See Other pour forcer une requête GET fraîche
             resp.set_cookie("language", lang, max_age=60 * 60 * 24 * 365)  # 1 year
             # Also set in session via set_lang
@@ -1253,7 +1307,7 @@ def set_language_route(lang):
             return resp
     except ImportError:
         pass
-    next_url = request.args.get('next', url_for('documents'))
+    next_url = request.args.get("next", url_for("documents"))
     return redirect(next_url)
 
 
@@ -1262,38 +1316,41 @@ def set_language_route(lang):
 # Importer le module d'extraction
 from text_extractor import process_uploaded_file
 
+
 @app.route("/api/extract", methods=["POST"])
 @login_required
 def api_extract_document():
     """
     API endpoint pour extraire les informations d'un fichier uploadé.
-    
+
     Cette route accepte un fichier (PDF ou image) et retourne les informations extraites.
     """
     if "file" not in request.files:
         return jsonify({"success": False, "error": "Aucun fichier fourni"}), 400
-    
+
     file = request.files["file"]
     if not file or file.filename == "":
         return jsonify({"success": False, "error": "Fichier invalide"}), 400
-    
+
     # Traiter le fichier
     result = process_uploaded_file(file)
-    
+
     if not result["success"]:
         return jsonify(result), 400
-    
+
     # Formater les données pour le frontend
     extracted_data = result["info"]
-    
+
     # Ajouter le nom de fichier original
     extracted_data["original_filename"] = file.filename
-    
-    return jsonify({
-        "success": True,
-        "text": result["text"][:2000],  # Limiter la taille du texte retourné
-        "extracted": extracted_data
-    })
+
+    return jsonify(
+        {
+            "success": True,
+            "text": result["text"][:2000],  # Limiter la taille du texte retourné
+            "extracted": extracted_data,
+        }
+    )
 
 
 @app.route("/api/save-extracted", methods=["POST"])
@@ -1301,7 +1358,7 @@ def api_extract_document():
 def api_save_extracted_document():
     """
     Sauvegarde un document avec les informations extraites et modifiées par l'utilisateur.
-    
+
     Reçoit les données via FormData avec :
     - file: le fichier uploadé
     - json_data: les données JSON avec les champs extraits/modifiés
@@ -1309,16 +1366,16 @@ def api_save_extracted_document():
     # Vérifier que le fichier a été uploadé
     if "file" not in request.files:
         return jsonify({"success": False, "error": "Aucun fichier fourni"}), 400
-    
+
     file = request.files["file"]
     if not file or file.filename == "":
         return jsonify({"success": False, "error": "Fichier invalide"}), 400
-    
+
     # Vérifier l'extension
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".pdf"]:
         return jsonify({"success": False, "error": "Type de fichier non autorisé"}), 400
-    
+
     # Sauvegarder le fichier
     ensure_upload_folder()
     filename = secure_filename(file.filename)
@@ -1327,67 +1384,91 @@ def api_save_extracted_document():
         file.save(file_path)
     except Exception as e:
         return jsonify({"success": False, "error": f"Erreur lors de l'upload: {str(e)}"}), 500
-    
+
     # Récupérer les données JSON
     json_data_str = request.form.get("json_data", "{}")
     try:
         data = json.loads(json_data_str)
     except:
         data = {}
-    
+
     # Récupérer les informations
     title = data.get("title", "").strip()
     content = data.get("content", "").strip()
-    validity_date = data.get("validity_date", "")
     doc_type = data.get("doc_type", "")
-    
+
+    # Récupérer les champs obligatoires pour validation
+    organisme_certificateur = data.get("organisme_certificateur", "").strip()
+    norme = data.get("norme", "").strip()
+    date_peremption = data.get("date_peremption", "").strip()
+    entreprise_certifiee = data.get("entreprise_certifiee", "").strip()
+    pays = data.get("pays", "").strip()
+    adresse = data.get("adresse", "").strip()
+
+    # Validation des champs obligatoires
+    if not title:
+        return jsonify({"success": False, "error": "Le titre est obligatoire"}), 400
+    if not organisme_certificateur:
+        return jsonify({"success": False, "error": "L'organisme certificateur est obligatoire"}), 400
+    if not norme:
+        return jsonify({"success": False, "error": "La norme est obligatoire"}), 400
+    if not date_peremption:
+        return jsonify({"success": False, "error": "La date de péremption est obligatoire"}), 400
+    if not entreprise_certifiee:
+        return jsonify({"success": False, "error": "L'entreprise certifiée est obligatoire"}), 400
+    if not pays:
+        return jsonify({"success": False, "error": "Le pays est obligatoire"}), 400
+    if not adresse:
+        return jsonify({"success": False, "error": "L'adresse est obligatoire"}), 400
+    if not doc_type:
+        return jsonify({"success": False, "error": "Le type de document est obligatoire"}), 400
+
     # Construire les attributs à partir des champs extraits
     attributes = {}
-    
-    # Organisme Certificateur -> societe_certificatrice
-    if data.get("organisme_certificateur"):
-        attributes["societe_certificatrice"] = data["organisme_certificateur"].strip()
-    
-    # Type de Norme -> norme
-    if data.get("type_norme"):
-        attributes["norme"] = data["type_norme"].strip()
-    
+
+    # Organisme Certificateur
+    if organisme_certificateur:
+        attributes["organisme_certificateur"] = organisme_certificateur
+
+    # Norme
+    if norme:
+        attributes["norme"] = norme
+
     # Date de péremption
-    if data.get("date_peremption"):
-        attributes["date_peremption"] = data["date_peremption"].strip()
-    
-    # Entreprise Certifiée -> nom_societe_certifiee
-    if data.get("entreprise_certifiee"):
-        attributes["nom_societe_certifiee"] = data["entreprise_certifiee"].strip()
-    
+    if date_peremption:
+        attributes["date_peremption"] = date_peremption
+
+    # Entreprise Certifiée
+    if entreprise_certifiee:
+        attributes["entreprise_certifiee"] = entreprise_certifiee
+
     # Pays
-    if data.get("pays"):
-        attributes["pays"] = data["pays"].strip()
-    
+    if pays:
+        attributes["pays"] = pays
+
     # Adresse
-    if data.get("adresse"):
-        attributes["adresse"] = data["adresse"].strip()
-    
+    if adresse:
+        attributes["adresse"] = adresse
+
     # URL de téléchargement (optionnel)
     if data.get("url_telechargement"):
         attributes["url_telechargement"] = data["url_telechargement"].strip()
-    
+
     # Sauvegarder dans la base
     try:
         db_file_path = os.path.basename(file_path) if file_path else None
-        
+
         new_doc = DocumentDB(
             title=title or "Document sans titre",
             content=content,
             user_id=current_user.id,
-            validity_date=validity_date if validity_date else None,
             file_path=db_file_path,
             type=doc_type,
             attributes=json.dumps(attributes),
         )
         db.session.add(new_doc)
         db.session.commit()
-        
+
         # Associer aux produits si spécifiés
         product_ids = data.get("product_ids", [])
         if product_ids:
@@ -1405,13 +1486,9 @@ def api_save_extracted_document():
                             )
                             db.session.add(relation)
             db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "document_id": new_doc.id,
-            "message": "Document ajouté avec succès !"
-        })
-        
+
+        return jsonify({"success": True, "document_id": new_doc.id, "message": "Document ajouté avec succès !"})
+
     except Exception as e:
         # Nettoyer le fichier si erreur
         try:
@@ -1429,7 +1506,6 @@ def add_document():
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         content = request.form.get("content", "").strip()
-        validity_date = request.form.get("validity_date")
         doc_type = request.form.get("doc_type", "")
 
         # L'auteur est automatiquement l'utilisateur connecté
@@ -1450,10 +1526,7 @@ def add_document():
 
                 # Vérifier le MIME type (pour éviter les fichiers renommés)
                 # Skip in testing mode
-                if (
-                    not app.config.get("TESTING", False)
-                    and file.content_type != "application/pdf"
-                ):
+                if not app.config.get("TESTING", False) and file.content_type != "application/pdf":
                     flash("Le fichier doit être un PDF valide", "error")
                     return redirect(url_for("documents"))
 
@@ -1473,9 +1546,7 @@ def add_document():
         if doc_type:
             doc_type_config = get_document_type(doc_type)
             if doc_type_config:
-                for attr_name, attr_config in doc_type_config.get(
-                    "attributes", {}
-                ).items():
+                for attr_name, attr_config in doc_type_config.get("attributes", {}).items():
                     attr_value = request.form.get(f"doc_attr_{attr_name}", "").strip()
                     # Always include the attribute, even if empty (for optional fields)
                     attributes[attr_name] = attr_value
@@ -1502,14 +1573,13 @@ def add_document():
                     title=title,
                     content=content,
                     user_id=user_id,
-                    validity_date=validity_date,
                     file_path=db_file_path,
                     type=doc_type,
                     attributes=json.dumps(attributes),
                 )
                 db.session.add(new_doc)
                 db.session.commit()
-                
+
                 # Associer le document aux produits sélectionnés
                 product_ids = request.form.getlist("product_ids")
                 if product_ids:
@@ -1655,9 +1725,7 @@ def admin_edit_user(user_id):
 
         try:
             # Check if new username already exists (excluding current user)
-            existing_user = UserDB.query.filter(
-                UserDB.username == new_username, UserDB.id != user_id
-            ).first()
+            existing_user = UserDB.query.filter(UserDB.username == new_username, UserDB.id != user_id).first()
             if existing_user:
                 flash("Ce nom d'utilisateur existe déjà", "error")
                 return redirect(url_for("admin_edit_user", user_id=user_id))
@@ -1668,9 +1736,7 @@ def admin_edit_user(user_id):
 
             if new_password:
                 if len(new_password) < 6:
-                    flash(
-                        "Le mot de passe doit contenir au moins 6 caractères", "error"
-                    )
+                    flash("Le mot de passe doit contenir au moins 6 caractères", "error")
                     return redirect(url_for("admin_edit_user", user_id=user_id))
                 user.password = generate_password_hash(new_password)
 
@@ -1745,6 +1811,111 @@ def uploaded_file(filename):
 
 
 # ============================================================================
+# Certificate Auto-Check Admin Routes
+# ============================================================================
+
+
+@app.route("/admin/certificate-check/config", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_certificate_check_config():
+    """Configuration de la fréquence de vérification automatique des certificats"""
+    if request.method == "POST":
+        frequency_hours = request.form.get("frequency_hours", "")
+
+        try:
+            hours_int = int(frequency_hours)
+            if hours_int < 1 or hours_int > 720:  # 1h à 30 jours max
+                raise ValueError("Fréquence hors limite")
+
+            # Sauvegarder dans les variables d'environnement (pour la session actuelle)
+            # Note: Pour persister, il faudrait utiliser une base de données ou un fichier de config
+            os.environ["CHECK_FREQUENCY_HOURS"] = str(hours_int)
+
+            # Rescheduler le job si le scheduler est disponible
+            if hasattr(app, "scheduler") and app.scheduler:
+                try:
+                    # Supprimer l'ancien job
+                    app.scheduler.remove_job("certificate_auto_check")
+                    # Ajouter le nouveau job
+                    from apscheduler.triggers.interval import IntervalTrigger
+
+                    app.scheduler.add_job(
+                        func=check_all_documents,
+                        trigger=IntervalTrigger(hours=hours_int),
+                        id="certificate_auto_check",
+                        name="Vérification automatique des certificats",
+                        replace_existing=True,
+                    )
+                    flash(f"Fréquence mise à jour à {hours_int} heures !", "success")
+                except Exception as e:
+                    flash(f"Erreur lors de la mise à jour du scheduler: {str(e)}", "error")
+                    # Remettre l'ancienne valeur
+                    os.environ["CHECK_FREQUENCY_HOURS"] = str(
+                        app.scheduler.get_job("certificate_auto_check").trigger.interval.hours
+                        if app.scheduler.get_job("certificate_auto_check")
+                        else 168
+                    )
+            else:
+                flash("Fréquence enregistrée (redémarrez l'application pour appliquer)", "success")
+
+        except ValueError:
+            flash("Veuillez entrer un nombre entre 1 et 720 heures", "error")
+        except Exception as e:
+            flash(f"Erreur: {str(e)}", "error")
+
+        return redirect(url_for("admin_certificate_check_config"))
+
+    # GET - Afficher le formulaire
+    current_frequency = os.environ.get("CHECK_FREQUENCY_HOURS", 168)
+    try:
+        current_frequency = int(current_frequency)
+    except:
+        current_frequency = 168
+
+    return render_template("admin/certificate_check_config.html", current_frequency=current_frequency)
+
+
+@app.route("/admin/certificate-check/run", methods=["POST"])
+@login_required
+@admin_required
+def admin_certificate_check_run():
+    """Déclenche une vérification manuelle de tous les certificats"""
+    from certificate_checker import run_manual_check
+
+    result = run_manual_check()
+
+    flash(
+        f"Vérification terminée: {result['total_checked']} documents vérifiés "
+        f"({result['changed']} changés, {result['new']} nouveaux, {result['errors']} erreurs)",
+        "success" if result["errors"] == 0 else "warning",
+    )
+
+    return redirect(url_for("admin_certificate_check_config"))
+
+
+@app.route("/admin/certificate-check/status")
+@login_required
+@admin_required
+def admin_certificate_check_status():
+    """Affiche le statut des vérifications pour tous les documents"""
+    from certificate_checker import get_document_check_status
+
+    all_docs = DocumentDB.query.all()
+
+    docs_status = []
+    for doc in all_docs:
+        status = get_document_check_status(doc)
+        if status["has_url"]:
+            docs_status.append({"doc": doc, **status})
+
+    # Trier par dernière vérification (les plus récents en premier)
+    docs_status.sort(key=lambda x: x.get("last_checked", ""), reverse=True)
+
+    return render_template("admin/certificate_check_status.html", documents=docs_status)
+
+
+# ============================================================================
 # Dashboard Operations - Routes principales
 # ============================================================================
 
@@ -1764,12 +1935,13 @@ def operations_dashboard():
 
     # Récupérer les produits de l'utilisateur pour le filtre
     user_products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
-    
+
     # Récupérer le produit sélectionné depuis les query params ou la session
-    selected_product_id = request.args.get('product_id', '')
+    selected_product_id = request.args.get("product_id", "")
 
     # Créer un token JWT pour les appels API depuis le frontend
     from app_sqlalchemy import create_jwt_token
+
     user_obj = User(
         id=current_user.id,
         username=current_user.username,
@@ -1801,7 +1973,7 @@ def my_products():
     """Liste des produits de l'utilisateur"""
     # Récupérer tous les produits de l'utilisateur
     products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
-    
+
     return render_template("products.html", products=products)
 
 
@@ -1813,7 +1985,7 @@ def add_product():
         name = request.form.get("name")
         description = request.form.get("description")
         document_ids = request.form.getlist("document_ids")
-        
+
         # Validation
         if not name:
             flash("Le nom du produit est obligatoire", "error")
@@ -1824,7 +1996,7 @@ def add_product():
                 user_documents=DocumentDB.query.filter_by(user_id=current_user.id).all(),
                 selected_doc_ids=[int(x) for x in document_ids if x.isdigit()],
             )
-        
+
         # Vérifier que le nom est unique pour cet utilisateur
         existing = ProductDB.query.filter_by(user_id=current_user.id, name=name).first()
         if existing:
@@ -1836,7 +2008,7 @@ def add_product():
                 user_documents=DocumentDB.query.filter_by(user_id=current_user.id).all(),
                 selected_doc_ids=[int(x) for x in document_ids if x.isdigit()],
             )
-        
+
         # Créer le produit
         product = ProductDB(
             user_id=current_user.id,
@@ -1845,7 +2017,7 @@ def add_product():
         )
         db.session.add(product)
         db.session.commit()
-        
+
         # Associer les documents sélectionnés
         if document_ids:
             for doc_id in document_ids:
@@ -1863,10 +2035,10 @@ def add_product():
                             )
                             db.session.add(relation)
             db.session.commit()
-        
+
         flash("Produit créé avec succès !", "success")
         return redirect(url_for("my_products"))
-    
+
     # GET - Afficher le formulaire
     user_documents = DocumentDB.query.filter_by(user_id=current_user.id).all()
     return render_template("products_add.html", user_documents=user_documents)
@@ -1877,11 +2049,11 @@ def add_product():
 def view_product(product_id):
     """Voir les détails d'un produit"""
     product = ProductDB.query.get_or_404(product_id)
-    
+
     # Vérifier que le produit appartient à l'utilisateur
     if product.user_id != current_user.id:
         abort(403)
-    
+
     return render_template("products_view.html", product=product)
 
 
@@ -1890,16 +2062,16 @@ def view_product(product_id):
 def edit_product(product_id):
     """Modifier un produit"""
     product = ProductDB.query.get_or_404(product_id)
-    
+
     # Vérifier que le produit appartient à l'utilisateur
     if product.user_id != current_user.id:
         abort(403)
-    
+
     if request.method == "POST":
         name = request.form.get("name")
         description = request.form.get("description")
         document_ids = request.form.getlist("document_ids")
-        
+
         # Validation
         if not name:
             flash("Le nom du produit est obligatoire", "error")
@@ -1911,12 +2083,10 @@ def edit_product(product_id):
                 user_documents=user_documents,
                 product_document_ids=product_document_ids,
             )
-        
+
         # Vérifier que le nom est unique pour cet utilisateur (sauf pour le produit actuel)
         existing = ProductDB.query.filter(
-            ProductDB.user_id == current_user.id,
-            ProductDB.name == name,
-            ProductDB.id != product_id
+            ProductDB.user_id == current_user.id, ProductDB.name == name, ProductDB.id != product_id
         ).first()
         if existing:
             flash("Un produit avec ce nom existe déjà", "error")
@@ -1928,28 +2098,26 @@ def edit_product(product_id):
                 user_documents=user_documents,
                 product_document_ids=product_document_ids,
             )
-        
+
         # Mettre à jour le produit
         product.name = name
         product.description = description
         product.updated_at = func.now()
-        
+
         # Mettre à jour les documents associés
         # D'abord, supprimer les anciennes relations qui ne sont plus sélectionnées
         selected_doc_ids = [int(x) for x in document_ids if x.isdigit()]
-        
+
         # Récupérer les IDs des documents actuellement associés
         current_doc_ids = [doc.id for doc in product.documents]
-        
+
         # Supprimer les relations pour les documents non sélectionnés
         for doc_id in current_doc_ids:
             if doc_id not in selected_doc_ids:
-                relation = ProductDocumentDB.query.filter_by(
-                    product_id=product.id, document_id=doc_id
-                ).first()
+                relation = ProductDocumentDB.query.filter_by(product_id=product.id, document_id=doc_id).first()
                 if relation:
                     db.session.delete(relation)
-        
+
         # Ajouter les nouvelles relations
         for doc_id in selected_doc_ids:
             if doc_id not in current_doc_ids:
@@ -1960,12 +2128,12 @@ def edit_product(product_id):
                         document_id=doc_id,
                     )
                     db.session.add(relation)
-        
+
         db.session.commit()
-        
+
         flash("Produit mis à jour avec succès !", "success")
         return redirect(url_for("my_products"))
-    
+
     # GET - Afficher le formulaire
     user_documents = DocumentDB.query.filter_by(user_id=current_user.id).all()
     product_document_ids = [doc.id for doc in product.documents]
@@ -1982,22 +2150,22 @@ def edit_product(product_id):
 def delete_product(product_id):
     """Supprimer un produit"""
     product = ProductDB.query.get_or_404(product_id)
-    
+
     # Vérifier que le produit appartient à l'utilisateur
     if product.user_id != current_user.id:
         abort(403)
-    
+
     if request.method == "POST":
         # Supprimer les relations avec les documents
         ProductDocumentDB.query.filter_by(product_id=product.id).delete()
-        
+
         # Supprimer le produit
         db.session.delete(product)
         db.session.commit()
-        
+
         flash("Produit supprimé avec succès !", "success")
         return redirect(url_for("my_products"))
-    
+
     return render_template("products_delete.html", product=product)
 
 
@@ -2006,26 +2174,24 @@ def delete_product(product_id):
 def remove_document_from_product(product_id, document_id):
     """Retirer un document d'un produit"""
     product = ProductDB.query.get_or_404(product_id)
-    
+
     # Vérifier que le produit appartient à l'utilisateur
     if product.user_id != current_user.id:
         abort(403)
-    
+
     # Vérifier que le document appartient à l'utilisateur
     doc = DocumentDB.query.get_or_404(document_id)
     if doc.user_id != current_user.id:
         abort(403)
-    
+
     # Supprimer la relation
-    relation = ProductDocumentDB.query.filter_by(
-        product_id=product_id, document_id=document_id
-    ).first()
-    
+    relation = ProductDocumentDB.query.filter_by(product_id=product_id, document_id=document_id).first()
+
     if relation:
         db.session.delete(relation)
         db.session.commit()
         flash("Document retiré du produit avec succès", "success")
-    
+
     return redirect(url_for("edit_product", product_id=product_id))
 
 
@@ -2039,17 +2205,19 @@ def remove_document_from_product(product_id, document_id):
 def api_get_user_products():
     """Récupère la liste des produits de l'utilisateur"""
     products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
-    
+
     products_list = []
     for product in products:
-        products_list.append({
-            "id": product.id,
-            "name": product.name,
-            "description": product.description,
-            "document_count": len(product.documents),
-            "created_at": product.created_at.isoformat() if product.created_at else None,
-        })
-    
+        products_list.append(
+            {
+                "id": product.id,
+                "name": product.name,
+                "description": product.description,
+                "document_count": len(product.documents),
+                "created_at": product.created_at.isoformat() if product.created_at else None,
+            }
+        )
+
     return jsonify({"success": True, "products": products_list})
 
 
@@ -2058,20 +2226,31 @@ def api_get_user_products():
 def api_get_product_documents(product_id):
     """Récupère les documents associés à un produit"""
     product = ProductDB.query.get_or_404(product_id)
-    
+
     if product.user_id != current_user.id:
         return jsonify({"success": False, "error": "Accès refusé"}), 403
-    
+
     documents_list = []
     for doc in product.documents:
-        documents_list.append({
-            "id": doc.id,
-            "title": doc.title,
-            "type": doc.type,
-            "validity_date": doc.validity_date.isoformat() if doc.validity_date else None,
-            "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
-        })
-    
+        # Get date_peremption from attributes
+        attrs = {}
+        if doc.attributes:
+            try:
+                attrs = json.loads(doc.attributes)
+            except:
+                attrs = {}
+        date_peremption = attrs.get("date_peremption", "")
+
+        documents_list.append(
+            {
+                "id": doc.id,
+                "title": doc.title,
+                "type": doc.type,
+                "date_peremption": date_peremption,
+                "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
+            }
+        )
+
     return jsonify({"success": True, "documents": documents_list})
 
 
@@ -2095,12 +2274,7 @@ def api_save_dashboard_config():
     """Sauvegarde la configuration du dashboard"""
     data = request.get_json()
 
-    if (
-        not data
-        or "config_name" not in data
-        or "layout" not in data
-        or "widgets" not in data
-    ):
+    if not data or "config_name" not in data or "layout" not in data or "widgets" not in data:
         return jsonify({"error": "Missing required fields"}), 400
 
     config_name = data["config_name"]
@@ -2158,17 +2332,11 @@ def api_get_widget_data(widget_id):
 def api_get_all_widgets_data():
     """Récupère les données pour tous les widgets actifs"""
     config = get_user_dashboard_config(current_user.id)
-    active_widgets = {
-        wid: info
-        for wid, info in config.get("widgets", {}).items()
-        if info.get("enabled", False)
-    }
+    active_widgets = {wid: info for wid, info in config.get("widgets", {}).items() if info.get("enabled", False)}
 
     results = {}
     for widget_id in active_widgets:
-        results[widget_id] = get_dashboard_widget_data(
-            widget_id, current_user.id, current_user.role
-        )
+        results[widget_id] = get_dashboard_widget_data(widget_id, current_user.id, current_user.role)
 
     return jsonify(results)
 
@@ -2283,9 +2451,7 @@ def api_logout():
     """Déconnexion via API (invalide le token côté client)"""
     # Avec JWT, la déconnexion est gérée côté client
     # On pourrait ajouter le token à une blacklist, mais ce n'est pas implémenté ici
-    return jsonify(
-        {"message": "Successfully logged out. Please clear your token client-side."}
-    )
+    return jsonify({"message": "Successfully logged out. Please clear your token client-side."})
 
 
 @app.route("/api/documents", methods=["GET"])
@@ -2308,10 +2474,8 @@ def api_get_documents():
     if user_role == "admin":
         query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id)
     else:
-        query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).filter(
-            DocumentDB.user_id == user_id
-        )
-    
+        query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).filter(DocumentDB.user_id == user_id)
+
     # Filtrer par produit si un product_id est spécifié
     if product_id and product_id.isdigit():
         # Filtrer par produit si un product_id est spécifié
@@ -2340,11 +2504,8 @@ def api_get_documents():
     if upload_to:
         query = query.filter(func.date(DocumentDB.upload_date) <= upload_to)
 
-    if validity_from:
-        query = query.filter(DocumentDB.validity_date >= validity_from)
-
-    if validity_to:
-        query = query.filter(DocumentDB.validity_date <= validity_to)
+    # Note: validity_from and validity_to filters removed - date_peremption is now in attributes only
+    # Filtering by date range would require post-processing since it's stored in JSON
 
     query = query.order_by(DocumentDB.upload_date.desc())
 
@@ -2361,18 +2522,18 @@ def api_get_documents():
             except:
                 attrs = {}
 
+        date_peremption = attrs.get("date_peremption", "")
+
         docs_list.append(
             {
                 "id": doc.id,
                 "title": doc.title,
                 "content": doc.content,
                 "upload_date": doc.upload_date.isoformat() if doc.upload_date else None,
-                "validity_date": str(doc.validity_date) if doc.validity_date else None,
+                "date_peremption": date_peremption,
                 "file_path": doc.file_path,
                 "file_url": (
-                    url_for("uploaded_file", filename=doc.file_path, _external=True)
-                    if doc.file_path
-                    else None
+                    url_for("uploaded_file", filename=doc.file_path, _external=True) if doc.file_path else None
                 ),
                 "author": doc.owner.username,
                 "type": doc.type,
@@ -2397,7 +2558,6 @@ def api_create_document():
 
     title = data.get("title", "").strip()
     content = data.get("content", "")
-    validity_date = data.get("validity_date")
     file_base64 = data.get("file")
     doc_type = data.get("doc_type", "")
 
@@ -2437,25 +2597,15 @@ def api_create_document():
         if doc_type:
             doc_type_config = get_document_type(doc_type)
             if doc_type_config:
-                for attr_name, attr_config in doc_type_config.get(
-                    "attributes", {}
-                ).items():
+                for attr_name, attr_config in doc_type_config.get("attributes", {}).items():
                     attr_value = data.get(attr_name, "").strip()
                     attributes[attr_name] = attr_value
-
-        # Convert validity_date string to date object if needed
-        if validity_date and isinstance(validity_date, str):
-            try:
-                validity_date = datetime.strptime(validity_date, "%Y-%m-%d").date()
-            except:
-                validity_date = None
 
         # Create document using SQLAlchemy
         new_doc = DocumentDB(
             title=title,
             content=content,
             user_id=user_id,
-            validity_date=validity_date,
             file_path=db_file_path,
             type=doc_type,
             attributes=json.dumps(attributes),

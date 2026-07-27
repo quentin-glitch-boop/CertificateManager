@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Accueil - CertiFlow{% endblock %}
-{% block breadcrumb_title %}Accueil{% endblock %}
+{% block title %}{{ t('home') }} - CertiFlow{% endblock %}
+{% block breadcrumb_title %}{{ t('home') }}{% endblock %}
 
 {% block content %}
 <div class="home-container">
     <section class="hero-section">
         <div class="hero-content">
-            <h1><i class="fas fa-certificate me-md"></i> Bienvenue sur CertiFlow</h1>
-            <p class="subtitle">Gestion centralisée de vos certificats et documents</p>
+            <h1><i class="fas fa-certificate me-md"></i> {{ t('welcome') }} CertiFlow</h1>
+            <p class="subtitle">{{ t('centralized_management') }}</p>
         </div>
     </section>
 
     <section class="features-section">
         <div class="section-header">
-            <h2><i class="fas fa-star me-md"></i> Fonctionnalités principales</h2>
+            <h2><i class="fas fa-star me-md"></i> {{ t('main_features') }}</h2>
         </div>
         <div class="features-grid">
             <div class="feature-card">

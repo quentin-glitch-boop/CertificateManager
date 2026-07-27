@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t('delete_product') }} - CertiFlow{% endblock %}
+
+{% block breadcrumb_title %}{{ t('delete_product') }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ t('delete_product') }}</h1>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>{{ t('delete_product') }}: {{ product.name }}</h2>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            {{ t('are_you_sure_delete_product') }}
+        </div>
+        
+        <p>Cette action est irréversible. Tous les documents associés à ce produit ne seront pas supprimés, mais la relation sera perdue.</p>
+        
+        <form method="POST" action="{{ url_for('delete_product', product_id=product.id) }}">
+            <div class="form-group">
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> {{ t('delete') }}
+                </button>
+                <a href="{{ url_for('my_products') }}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> {{ t('cancel') }}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t('my_products') }} - CertiFlow{% endblock %}
+
+{% block breadcrumb_title %}{{ t('my_products') }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ t('my_products') }}</h1>
+    <p>{{ t('product_description') }}</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>{{ t('products') }}</h2>
+        <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> {{ t('add_product') }}
+        </a>
+    </div>
+    <div class="card-body">
+        {% if products|length > 0 %}
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>{{ t('product_name') }}</th>
+                        <th>{{ t('product_description') }}</th>
+                        <th>Documents</th>
+                        <th>{{ t('created_at') }}</th>
+                        <th>{{ t('actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.description or '-' }}</td>
+                        <td>{{ product.documents|length }}</td>
+                        <td>{{ product.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td class="table-actions">
+                            <a href="{{ url_for('edit_product', product_id=product.id) }}" 
+                               class="btn btn-sm btn-secondary" title="{{ t('edit') }}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{{ url_for('view_product', product_id=product.id) }}" 
+                               class="btn btn-sm btn-info" title="{{ t('details') }}">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('delete_product', product_id=product.id) }}" 
+                               class="btn btn-sm btn-danger" 
+                               onclick="return confirm('{{ t('are_you_sure_delete_product') }}')" 
+                               title="{{ t('delete') }}">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            {{ t('no_products') }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mt-lg">
+    <div class="card-header">
+        <h3>{{ t('associate_documents') }}</h3>
+    </div>
+    <div class="card-body">
+        <p>Associez vos documents existants à vos produits pour les organiser et filtrer dans le tableau de bord Opérations.</p>
+        <a href="{{ url_for('documents') }}" class="btn btn-secondary">
+            <i class="fas fa-file-alt"></i> Voir mes documents
+        </a>
+    </div>
+</div>
+{% endblock %}

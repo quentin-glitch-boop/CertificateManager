@@ -10,6 +10,10 @@
     .operations-header p { color: var(--text-secondary); margin-top: var(--spacing-xs); }
     .dashboard-controls { display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); }
     .btn-customize { background: var(--primary); color: white; }
+    .flex { display: flex; }
+    .items-center { align-items: center; }
+    .gap-md { gap: var(--spacing-md); }
+    .mb-lg { margin-bottom: var(--spacing-lg); }
     .grid-stack { background: transparent; padding: 0; }
     .grid-stack-item { background: var(--card-bg); border: 1px solid var(--border-light); border-radius: var(--border-radius); box-shadow: var(--shadow-sm); transition: var(--transition); }
     .grid-stack-item:hover { box-shadow: var(--shadow-md); }
@@ -53,19 +57,42 @@
 
 {% block content %}
 <div class="operations-header">
-    <h1><i class="fas fa-chart-line me-md"></i> Tableau de bord Opérations</h1>
-    <p>Personnalisez votre espace de travail avec des widgets</p>
+    <h1><i class="fas fa-chart-line me-md"></i> {{ t('operations_dashboard') }}</h1>
+    <p>{{ t('dashboard_subtitle') }}</p>
+</div>
+
+<!-- Product Selector -->
+<div class="card mb-lg">
+    <div class="card-body">
+        <div class="form-group mb-0">
+            <label for="product-selector">{{ t('select_product') }}</label>
+            <div class="flex items-center gap-md">
+                <select id="product-selector" class="form-control" style="max-width: 300px;" onchange="changeProductFilter()">
+                    <option value="">{{ t('all_products') }}</option>
+                    {% for product in user_products %}
+                    <option value="{{ product.id }}" 
+                            {% if product.id|string == selected_product_id|string %}selected{% endif %}>
+                        {{ product.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <a href="{{ url_for('my_products') }}" class="btn btn-primary" title="{{ t('manage_products') }}">
+                    <i class="fas fa-cog"></i>
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="dashboard-controls">
     <button class="btn btn-customize" onclick="toggleEditMode()">
-        <i class="fas fa-cog"></i> <span id="edit-mode-text">Personnaliser</span>
+        <i class="fas fa-cog"></i> <span id="edit-mode-text">{{ t('customize') }}</span>
     </button>
     <button class="btn btn-secondary" onclick="saveDashboard()" id="btn-save" style="display: none;">
-        <i class="fas fa-save"></i> Sauvegarder
+        <i class="fas fa-save"></i> {{ t('save') }}
     </button>
     <button class="btn btn-secondary" onclick="cancelEdit()" id="btn-cancel" style="display: none;">
-        <i class="fas fa-times"></i> Annuler
+        <i class="fas fa-times"></i> {{ t('cancel') }}
     </button>
 </div>
 
@@ -73,6 +100,10 @@
 
 <script>
     const jwtToken = '{{ jwt_token }}';
+    const i18n = {
+        customize: '{{ t("customize") }}',
+        finish: '{{ t("finish") }}'
+    };
     function apiFetch(url, options = {}) {
         return fetch(url, { 
             headers: { 'Authorization': `Bearer ${jwtToken}`, 'Content-Type': 'application/json' }, 
@@ -87,7 +118,7 @@
         const sidebar = document.querySelector('.sidebar');
         if (editMode) {
             if (sidebar) sidebar.style.zIndex = '1040';
-            document.getElementById('edit-mode-text').textContent = 'Terminer';
+            document.getElementById('edit-mode-text').textContent = i18n.finish;
             document.getElementById('btn-save').style.display = 'inline-flex';
             document.getElementById('btn-cancel').style.display = 'inline-flex';
             if (gridInstance) originalGridData = gridInstance.save(false);
@@ -95,7 +126,7 @@
             if (gridInstance) gridInstance.setStatic(false);
         } else {
             if (sidebar) sidebar.style.zIndex = '';
-            document.getElementById('edit-mode-text').textContent = 'Personnaliser';
+            document.getElementById('edit-mode-text').textContent = i18n.customize;
             document.getElementById('btn-save').style.display = 'none';
             document.getElementById('btn-cancel').style.display = 'none';
             document.querySelectorAll('.widget-edit-actions').forEach(el => el.style.display = 'none');
@@ -256,12 +287,28 @@
     
     function formatDate(dateStr) { if(!dateStr) return 'N/A'; const date = new Date(dateStr); return date.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
     
-    // Global variable to store documents data
+    // Global variable to store documents data and current product filter
     let allDocuments = [];
+    let currentProductId = '';
+    
+    // Function to get the API URL with current product filter
+    function getApiUrl() {
+        const productId = document.getElementById('product-selector')?.value || '';
+        return '{{ url_for("api_get_documents") }}' + (productId ? '?product_id=' + productId : '');
+    }
+    
+    // Function to change product filter and reload data
+    function changeProductFilter() {
+        const selectEl = document.getElementById('product-selector');
+        if (selectEl) {
+            currentProductId = selectEl.value;
+            loadAllWidgetsData();
+        }
+    }
     
     // Load documents once and populate all widgets
     function loadAllWidgetsData() {
-        apiFetch('{{ url_for("api_get_documents") }}')
+        apiFetch(getApiUrl())
             .then(r => r.json())
             .then(data => {
                 allDocuments = data.documents || data;

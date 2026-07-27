@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration Vérification Certificats - CertiFlow{% endblock %}
+{% block breadcrumb_title %}Configuration Vérification{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <!-- En-tête -->
+            <div class="card mb-lg">
+                <div class="card-header">
+                    <h3><i class="fas fa-cog me-md"></i> Configuration de la vérification automatique</h3>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary mb-lg">
+                        Configurez la fréquence à laquelle l'application vérifie automatiquement 
+                        si les certificats ont été mis à jour sur leur URL de téléchargement.
+                    </p>
+                    
+                    <form method="POST" class="max-w-400">
+                        <div class="form-group">
+                            <label for="frequency_hours">Fréquence de vérification (heures)</label>
+                            <div class="input-group">
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="frequency_hours" 
+                                       name="frequency_hours"
+                                       min="1" 
+                                       max="720"
+                                       value="{{ current_frequency }}" 
+                                       required>
+                                <span class="input-group-text">heures</span>
+                            </div>
+                            <small class="form-text text-muted">
+                                Valeur actuelle: <strong>{{ current_frequency }} heures</strong>
+                                ({% set days = current_frequency / 24 %}
+                                {% if days > 1 %}
+                                    {{ "%.1f"|format(days) }} jours
+                                {% else %}
+                                    {{ "%.1f"|format(days * 24) }} heures
+                                {% endif %})
+                            </small>
+                        </div>
+                        
+                        <div class="form-group mt-lg">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-xs"></i> Sauvegarder
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-bolt me-md"></i> Actions</h3>
+                </div>
+                <div class="card-body">
+                    <div class="flex gap-md">
+                        <form method="POST" action="{{ url_for('admin_certificate_check_run') }}">
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt me-xs"></i> Vérifier maintenant
+                            </button>
+                        </form>
+                        
+                        <a href="{{ url_for('admin_certificate_check_status') }}" class="btn btn-info">
+                            <i class="fas fa-list me-xs"></i> Voir le statut
+                        </a>
+                    </div>
+                    
+                    <div class="mt-md text-sm text-secondary">
+                        <p><strong>Note:</strong> La vérification manuelle permet de forcer une mise à jour immédiate 
+                        de tous les certificats avec une URL valide.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

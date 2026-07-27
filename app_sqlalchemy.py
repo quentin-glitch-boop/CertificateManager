@@ -231,17 +231,24 @@ try:
         replace_existing=True,
     )
 
-    # Start the scheduler
-    scheduler.start()
-
     # Store scheduler in app context for access in routes
     app.scheduler = scheduler
+
+    def start_scheduler():
+        """Start the scheduler if not already running and not in testing mode"""
+        if hasattr(app, "scheduler") and app.scheduler and not app.config.get("TESTING", False):
+            if not app.scheduler.running:
+                app.scheduler.start()
+
+    def stop_scheduler():
+        """Stop the scheduler"""
+        if hasattr(app, "scheduler") and app.scheduler and app.scheduler.running:
+            app.scheduler.shutdown()
 
     @app.teardown_appcontext
     def shutdown_scheduler(exception=None):
         """Shutdown scheduler when app context ends"""
-        if hasattr(app, "scheduler"):
-            app.scheduler.shutdown()
+        stop_scheduler()
 
 except ImportError as e:
     # APScheduler not available, auto-check disabled
@@ -2795,4 +2802,5 @@ def api_uploaded_file(filename):
 if __name__ == "__main__":
     with app.app_context():
         init_db()
+        start_scheduler()
     app.run(debug=True, host="0.0.0.0", port=5000)

@@ -200,6 +200,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # Initialize SQLAlchemy with Flask app
 db.init_app(app)
 
+# Create database tables if they don't exist
+with app.app_context():
+    db.create_all()
+
 # Configuration
 UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", os.path.join(os.path.dirname(__file__), "static", "uploads"))
 ALLOWED_EXTENSIONS = {"pdf"}

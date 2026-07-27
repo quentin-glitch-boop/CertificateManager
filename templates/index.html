@@ -415,17 +415,20 @@
         {% endif %}
     {% endif %}
 
-    <!-- Modal Ajouter Document -->
-    <div id="add-document-modal" class="modal" style="display: none;">
-        <div class="modal-overlay"></div>
-        <div class="modal-container">
-            <div class="modal-header">
-                <h3 id="add-doc-modal-title"><i class="fas fa-upload me-md"></i> Ajouter un document</h3>
-                <button class="btn btn-sm btn-icon" onclick="closeAddDocumentModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body" id="add-doc-modal-body">
+    <script>
+        // Variables globales pour le workflow d'ajout
+        let currentFile = null;
+        let extractedData = null;
+        let currentStep = 1;
+        
+        // Ouvrir le modal d'ajout de document
+        function openAddDocumentModal() {
+            currentStep = 1;
+            currentFile = null;
+            extractedData = null;
+            
+            // Construire le HTML du workflow en 3 étapes
+            const modalContent = `
                 <!-- Étape 1: Upload du fichier -->
                 <div id="step1-upload" class="step-content">
                     <div class="step-indicator">
@@ -464,7 +467,7 @@
                     </div>
                     
                     <div class="flex justify-end gap-md mt-lg">
-                        <button class="btn btn-secondary" onclick="closeAddDocumentModal()">
+                        <button class="btn btn-secondary" onclick="closeModal()">
                             <i class="fas fa-times"></i> Annuler
                         </button>
                         <button class="btn btn-primary" onclick="extractDocumentInfo()" id="extract-btn" disabled>
@@ -609,28 +612,23 @@
                             Votre document a été ajouté à la base de données.<br>
                             Vous pouvez maintenant le consulter dans la liste des documents.
                         </p>
-                        <button class="btn btn-primary mt-lg" onclick="closeAddDocumentModal(); location.reload();">
+                        <button class="btn btn-primary mt-lg" onclick="closeModal(); location.reload();">
                             <i class="fas fa-check"></i> Terminer
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        // Variables globales pour le workflow d'ajout
-        let currentFile = null;
-        let extractedData = null;
-        let currentStep = 1;
-        
-        // Ouvrir le modal d'ajout de document
-        function openAddDocumentModal() {
-            currentStep = 1;
-            currentFile = null;
-            extractedData = null;
+            `;
             
-            // Réinitialiser l'interface
+            const modalFooter = `
+                <button class="btn btn-secondary" onclick="closeModal()">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+            `;
+            
+            // Ouvrir le modal avec le contenu
+            openModal('<i class="fas fa-upload me-md"></i> Ajouter un document', modalContent, modalFooter);
+            
+            // Réinitialiser l'interface après l'ouverture
             document.getElementById('step1-upload').style.display = 'block';
             document.getElementById('step2-review').style.display = 'none';
             document.getElementById('step3-confirm').style.display = 'none';
@@ -640,17 +638,16 @@
             document.getElementById('file-preview').classList.remove('visible');
             document.getElementById('extract-btn').disabled = true;
             document.getElementById('extraction-progress').classList.remove('visible');
-            document.getElementById('extracted-info-form').reset();
-            document.getElementById('extracted-info-form').style.display = 'none';
+            if (document.getElementById('extracted-info-form')) {
+                document.getElementById('extracted-info-form').reset();
+                document.getElementById('extracted-info-form').style.display = 'none';
+            }
             document.getElementById('extraction-result').style.display = 'none';
-            
-            // Afficher le modal
-            document.getElementById('add-document-modal').style.display = 'block';
         }
         
         // Fermer le modal
         function closeAddDocumentModal() {
-            document.getElementById('add-document-modal').style.display = 'none';
+            closeModal();
         }
         
         // Gérer le drag and drop

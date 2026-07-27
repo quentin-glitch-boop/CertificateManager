@@ -41,26 +41,32 @@
                     <li>
                         <a href="{{ url_for('home') }}" class="{% if request.path == '/' %}active{% endif %}">
                             <i class="fas fa-home nav-icon"></i>
-                            <span>Accueil</span>
+                            <span>{{ t('home') }}</span>
                         </a>
                     </li>
                     <li>
                         <a href="{{ url_for('documents') }}" class="{% if request.path == '/documents' %}active{% endif %}">
                             <i class="fas fa-file-alt nav-icon"></i>
-                            <span>Documents</span>
+                            <span>{{ t('documents') }}</span>
                         </a>
                     </li>
                     <li>
                         <a href="{{ url_for('operations_dashboard') }}" class="{% if request.path == '/operations' %}active{% endif %}">
                             <i class="fas fa-chart-line nav-icon"></i>
-                            <span>Opérations</span>
+                            <span>{{ t('operations') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('my_products') }}" class="{% if request.path.startswith('/products') %}active{% endif %}">
+                            <i class="fas fa-box nav-icon"></i>
+                            <span>{{ t('my_products') }}</span>
                         </a>
                     </li>
                     {% if current_user.role == 'admin' %}
                     <li>
                         <a href="{{ url_for('admin_users') }}" class="{% if request.path.startswith('/admin') %}active{% endif %}">
                             <i class="fas fa-users nav-icon"></i>
-                            <span>Utilisateurs</span>
+                            <span>{{ t('users') }}</span>
                         </a>
                     </li>
                     {% endif %}
@@ -85,7 +91,7 @@
                         <i class="fas fa-home"></i>
                         {% if request.path != '/' %}
                             <i class="fas fa-chevron-right"></i>
-                            <span>{% block breadcrumb_title %}Tableau de bord{% endblock %}</span>
+                            <span>{% block breadcrumb_title %}{{ t('dashboard_subtitle') }}{% endblock %}</span>
                         {% endif %}
                     </nav>
                     {% endblock %}
@@ -99,34 +105,32 @@
                         <span>{{ current_user.username }}</span>
                         <i class="fas fa-chevron-down"></i>
                         
-                        <div class="user-dropdown" style="display: none;">
+                        <div class="user-dropdown">
                             <div class="user-info">
-                                <div style="font-weight: 600;">{{ current_user.username }}</div>
-                                <div style="font-size: 12px; color: var(--text-light); margin-top: 5px;">
+                                <div>{{ current_user.username }}</div>
+                                <div class="user-info-role">
                                     <span class="badge badge-primary">{{ current_user.role.upper() }}</span>
                                 </div>
                             </div>
-                            <hr style="margin: 10px 0; border: none; border-top: 1px solid var(--border-light);">
+                            <hr>
                             
                             {% if available_languages|length > 1 %}
-                            <div style="margin-bottom: 10px;">
-                                <div style="font-size: 12px; color: var(--text-light); margin-bottom: 5px;">Langue</div>
+                            <div class="lang-selector">
+                                <div>{{ t('language') }}</div>
                                 {% for lang_code, lang_name in available_languages.items() %}
-                                <a href="{{ url_for('set_language_route', lang=lang_code) }}" 
-                                   style="display: block; padding: 8px 12px; color: var(--text-primary); text-decoration: none; border-radius: 4px;
-                                          {% if lang_code == current_lang %}background: var(--background); font-weight: 600;{% endif %}">
-                                    <i class="fas fa-check-circle" style="margin-right: 8px; color: var(--primary); visibility: {% if lang_code == current_lang %}visible{% else %}hidden{% endif %};"></i>
+                                <a href="{{ url_for('set_language_route', lang=lang_code, next=request.path) }}" 
+                                   class="{% if lang_code == current_lang %}active-lang{% endif %}">
+                                    {% if lang_code == current_lang %}<i class="fas fa-check-circle"></i>{% endif %}
                                     {{ lang_name }}
                                 </a>
                                 {% endfor %}
                             </div>
-                            <hr style="margin: 10px 0; border: none; border-top: 1px solid var(--border-light);">
+                            <hr>
                             {% endif %}
                             
-                            <a href="{{ url_for('logout') }}" 
-                               style="display: block; padding: 8px 12px; color: var(--text-danger); text-decoration: none; border-radius: 4px;">
-                                <i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>
-                                Deconnexion
+                            <a href="{{ url_for('logout') }}" class="text-danger">
+                                <i class="fas fa-sign-out-alt"></i>
+                                {{ t('logout') }}
                             </a>
                         </div>
                     </div>
@@ -230,7 +234,7 @@
                         e.target === userMenu.querySelector('span') || 
                         e.target === userMenu.querySelector('.fa-chevron-down')) {
                         e.stopPropagation();
-                        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+                        dropdown.classList.toggle('show');
                     }
                 });
                 
@@ -239,7 +243,7 @@
                     dropdown.addEventListener('click', function(e) {
                         // Don't close if clicking on a sub-element that might have its own handler
                         if (e.target.tagName === 'A' || e.target.tagName === 'DIV') {
-                            dropdown.style.display = 'none';
+                            dropdown.classList.remove('show');
                         }
                     });
                 }
@@ -250,7 +254,7 @@
                 const userMenu = document.querySelector('.user-menu');
                 if (userMenu && !userMenu.contains(e.target)) {
                     const dropdown = userMenu.querySelector('.user-dropdown');
-                    if (dropdown) dropdown.style.display = 'none';
+                    if (dropdown) dropdown.classList.remove('show');
                 }
             });
             
@@ -276,7 +280,7 @@
             const modalBody = document.getElementById('modal-body');
             const modalFooter = document.getElementById('modal-footer');
             
-            modalTitle.textContent = title;
+            modalTitle.innerHTML = title;
             modalBody.innerHTML = content;
             modalFooter.innerHTML = footer;
             modal.style.display = 'flex';

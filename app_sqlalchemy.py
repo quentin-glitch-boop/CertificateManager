@@ -1639,6 +1639,9 @@ def add_document():
         )
 
     if request.method == "POST":
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
         title = request.form.get("title", "").strip()
         content = request.form.get("content", "").strip()
         doc_type = request.form.get("doc_type", "")
@@ -1653,6 +1656,8 @@ def add_document():
             if file and file.filename != "":
                 # Vérifier que le fichier a une extension PDF
                 if not allowed_file(file.filename):
+                    if is_ajax:
+                        return jsonify({"success": False, "error": "Seuls les fichiers PDF sont autorisés"}), 400
                     flash("Seuls les fichiers PDF sont autorisés", "error")
                     return redirect(url_for("documents"))
 
@@ -1665,6 +1670,8 @@ def add_document():
                     not app.config.get("TESTING", False)
                     and file.content_type != "application/pdf"
                 ):
+                    if is_ajax:
+                        return jsonify({"success": False, "error": "Le fichier doit être un PDF valide"}), 400
                     flash("Le fichier doit être un PDF valide", "error")
                     return redirect(url_for("documents"))
 
@@ -1676,6 +1683,8 @@ def add_document():
                     file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
                     file.save(file_path)
                 except Exception as e:
+                    if is_ajax:
+                        return jsonify({"success": False, "error": f"Erreur lors de l'upload : {str(e)}"}), 500
                     flash(f"Erreur lors de l'upload : {str(e)}", "error")
                     return redirect(url_for("documents"))
 
@@ -1694,14 +1703,20 @@ def add_document():
             # Valider les attributs
             is_valid, errors = validate_document_attributes(doc_type, attributes)
             if not is_valid:
+                if is_ajax:
+                    return jsonify({"success": False, "error": "; ".join(errors)}), 400
                 for error in errors:
                     flash(error, "error")
                 return redirect(url_for("documents"))
 
         # Validation
         if not title:
+            if is_ajax:
+                return jsonify({"success": False, "error": "Le titre est obligatoire"}), 400
             flash("Le titre est obligatoire", "error")
         elif not file_path:
+            if is_ajax:
+                return jsonify({"success": False, "error": "Le fichier PDF est obligatoire"}), 400
             flash("Le fichier PDF est obligatoire", "error")
         else:
             try:
@@ -1739,10 +1754,17 @@ def add_document():
                                     db.session.add(relation)
                     db.session.commit()
 
+                if is_ajax:
+                    return jsonify({"success": True, "message": "Document ajouté avec succès !"}), 200
                 flash("Document ajouté avec succès !", "success")
                 return redirect(url_for("documents"))
             except Exception as e:
+                if is_ajax:
+                    return jsonify({"success": False, "error": f"Erreur : {str(e)}"}), 500
                 flash(f"Erreur : {str(e)}", "error")
+
+        if is_ajax:
+            return jsonify({"success": False, "error": "Données invalides"}), 400
 
     return redirect(url_for("documents"))
 

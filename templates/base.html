@@ -51,6 +51,12 @@
                         </a>
                     </li>
                     <li>
+                        <a href="{{ url_for('add_document') }}" class="{% if request.path == '/add' %}active{% endif %}">
+                            <i class="fas fa-plus nav-icon"></i>
+                            <span>Ajouter</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="{{ url_for('operations_dashboard') }}" class="{% if request.path == '/operations' %}active{% endif %}">
                             <i class="fas fa-chart-line nav-icon"></i>
                             <span>{{ t('operations') }}</span>

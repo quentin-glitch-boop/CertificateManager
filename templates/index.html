@@ -160,7 +160,7 @@
     {% endwith %}
 
     <!-- Section de recherche -->
-    <div class="card mb-lg">
+    <div class="card mb-xl">
         <div class="card-header">
             <h3><i class="fas fa-search me-md"></i> Rechercher des certificats</h3>
         </div>
@@ -168,17 +168,17 @@
             <form method="GET" action="{{ url_for('documents') }}" class="flex flex-col gap-md">
                 <div class="flex gap-lg flex-wrap">
                     <div class="flex-1 min-w-250">
-                        <label for="entreprise" class="form-label mb-xs">Entreprise Certifiée</label>
+                        <label for="entreprise" class="form-label mb-xs"><i class="fas fa-building me-xs"></i> Entreprise Certifiée</label>
                         <input type="text" class="form-control" id="entreprise" name="entreprise" 
                                value="{{ search_entreprise }}" placeholder="Nom de l'entreprise...">
                     </div>
                     <div class="flex-1 min-w-250">
-                        <label for="adresse" class="form-label mb-xs">Adresse</label>
+                        <label for="adresse" class="form-label mb-xs"><i class="fas fa-map-marker-alt me-xs"></i> Adresse</label>
                         <input type="text" class="form-control" id="adresse" name="adresse" 
                                value="{{ search_adresse }}" placeholder="Adresse...">
                     </div>
                     <div class="flex-1 min-w-250">
-                        <label for="norme" class="form-label mb-xs">Norme</label>
+                        <label for="norme" class="form-label mb-xs"><i class="fas fa-certificate me-xs"></i> Norme</label>
                         <input type="text" class="form-control" id="norme" name="norme" 
                                value="{{ search_norme }}" placeholder="Ex: ISO 9001:2015...">
                     </div>
@@ -195,33 +195,24 @@
         </div>
     </div>
 
-    <!-- Bouton Ajouter Document -->
+    <!-- Titre et sélecteur par page -->
     <div class="flex justify-between items-center mb-lg">
         <h2 class="m-0">
             <i class="fas fa-file-alt me-md"></i>
-            {% if documents|length == 0 %}
-                Aucun document trouvé
+            {% if pagination %}
+                {{ pagination.total }} certificat(s) trouvé(s)
             {% else %}
-                {% if pagination %}
-                    {{ pagination.total }} document(s) trouvé(s)
-                {% else %}
-                    {{ documents|length }} document(s) trouvé(s)
-                {% endif %}
+                {{ document_groups|length }} certificat(s) trouvé(s)
             {% endif %}
         </h2>
-        <div class="flex items-center gap-md">
-            <div class="flex items-center gap-sm">
-                <span class="text-sm">Par page:</span>
-                <select class="form-control form-control-sm" onchange="changePerPage(this)">
-                    <option value="5" {% if per_page == 5 %}selected{% endif %}>5</option>
-                    <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
-                    <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
-                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
-                </select>
-            </div>
-            <button class="btn btn-primary" onclick="openAddDocumentModal()">
-                <i class="fas fa-plus"></i> Ajouter un document
-            </button>
+        <div class="flex items-center gap-sm">
+            <span class="text-sm">Par page:</span>
+            <select class="form-control form-control-sm" onchange="changePerPage(this)">
+                <option value="5" {% if per_page == 5 %}selected{% endif %}>5</option>
+                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+            </select>
         </div>
     </div>
 
@@ -233,7 +224,7 @@
                 <h3> Aucun certificat trouvé </h3>
                 <p class="text-secondary mt-md">
                     Essayez de modifier vos critères de recherche ou 
-                    <a href="#" onclick="openAddDocumentModal()" class="text-primary">
+                    <a href="{{ url_for('add_document') }}" class="text-primary">
                         ajoutez votre premier certificat
                     </a>
                 </p>
@@ -396,526 +387,6 @@
         {% endif %}
     {% endif %}
 
-    <script>
-        // Variables globales pour le workflow d'ajout
-        let currentFile = null;
-        let extractedData = null;
-        let currentStep = 1;
-        
-        // Ouvrir le modal d'ajout de document
-        function openAddDocumentModal() {
-            currentStep = 1;
-            currentFile = null;
-            extractedData = null;
-            
-            // Construire le HTML du workflow en 3 étapes
-            const modalContent = `
-                <!-- Étape 1: Upload du fichier -->
-                <div id="step1-upload" class="step-content">
-                    <div class="step-indicator">
-                        <div class="step active">
-                            <div class="step-number">1</div>
-                            <span class="step-label">Upload</span>
-                        </div>
-                        <div class="step">
-                            <div class="step-number">2</div>
-                            <span class="step-label">Vérification</span>
-                        </div>
-                        <div class="step">
-                            <div class="step-number">3</div>
-                            <span class="step-label">Validation</span>
-                        </div>
-                    </div>
-                    
-                    <div class="upload-area" id="upload-area" onclick="document.getElementById('file-upload-input').click()">
-                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                        <div class="upload-instructions">Glissez-déposez votre fichier ici ou cliquez pour sélectionner</div>
-                        <div class="upload-hint">PDF uniquement (max 16 Mo)</div>
-                        <input type="file" id="file-upload-input" accept=".pdf" style="display: none;" onchange="handleFileUpload(event)">
-                    </div>
-                    
-                    <div id="file-preview" class="file-preview">
-                        <div class="flex items-center gap-md">
-                            <i class="fas fa-file-alt text-primary" style="font-size: 2rem;"></i>
-                            <div class="flex-1">
-                                <div class="font-weight-600" id="preview-filename"></div>
-                                <div class="text-sm text-secondary" id="preview-size"></div>
-                            </div>
-                            <button class="btn btn-sm btn-danger" onclick="removeFile()">
-                                <i class="fas fa-trash"></i> Supprimer
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-end gap-md mt-lg">
-                        <button class="btn btn-secondary" onclick="closeModal()">
-                            <i class="fas fa-times"></i> Annuler
-                        </button>
-                        <button class="btn btn-primary" onclick="extractDocumentInfo()" id="extract-btn" disabled>
-                            <i class="fas fa-magic"></i> Extraire les informations
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Étape 2: Vérification des informations extraites -->
-                <div id="step2-review" class="step-content" style="display: none;">
-                    <div class="step-indicator">
-                        <div class="step completed">
-                            <div class="step-number"><i class="fas fa-check"></i></div>
-                            <span class="step-label">Upload</span>
-                        </div>
-                        <div class="step active">
-                            <div class="step-number">2</div>
-                            <span class="step-label">Vérification</span>
-                        </div>
-                        <div class="step">
-                            <div class="step-number">3</div>
-                            <span class="step-label">Validation</span>
-                        </div>
-                    </div>
-                    
-                    <div class="extraction-progress" id="extraction-progress">
-                        <div class="spinner"></div>
-                        <div>Extraction en cours...</div>
-                        <div class="text-sm text-secondary">Cela peut prendre quelques secondes</div>
-                    </div>
-                    
-                    <form id="extracted-info-form" style="display: none;">
-                        <input type="hidden" id="extracted-original-filename">
-                        
-                        <div class="form-group">
-                            <label for="extracted-title">Titre <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="extracted-title" name="title" required>
-                        </div>
-                        
-                        <div class="extracted-fields" id="extracted-fields-container">
-                            <div class="extracted-field">
-                                <label for="extracted-organisme">Organisme Certificateur <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="extracted-organisme" name="organisme_certificateur" placeholder="Ex: Bureau Veritas, AFNOR, etc." required>
-                            </div>
-                            
-                            <div class="extracted-field">
-                                <label for="extracted-norme">Norme <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="extracted-norme" name="norme" placeholder="Ex: ISO 9001:2015, EN 1090, etc." required>
-                            </div>
-                            
-                            <div class="extracted-field">
-                                <label for="extracted-date">Date de péremption <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="extracted-date" name="date_peremption" required>
-                            </div>
-                            
-                            <div class="extracted-field">
-                                <label for="extracted-entreprise">Entreprise Certifiée <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="extracted-entreprise" name="entreprise_certifiee" placeholder="Nom de l'entreprise" required>
-                            </div>
-                            
-                            <div class="extracted-field">
-                                <label for="extracted-pays">Pays <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="extracted-pays" name="pays" placeholder="Ex: France, Belgique, etc." required>
-                            </div>
-                            
-                            <div class="extracted-field">
-                                <label for="extracted-adresse">Adresse <span class="text-danger">*</span></label>
-                                <textarea class="form-control textarea-control" id="extracted-adresse" name="adresse" placeholder="Adresse complète..." rows="2" required></textarea>
-                            </div>
-                            
-                            <div class="extracted-field">
-                                <label for="extracted-url">URL de téléchargement (optionnel)</label>
-                                <input type="url" class="form-control" id="extracted-url" name="url_telechargement" placeholder="https://exemple.com/certificat.pdf">
-                            </div>
-                            
-                            <div class="extracted-field">
-                                <label for="extracted-content">Description / Contenu (optionnel)</label>
-                                <textarea class="form-control textarea-control" id="extracted-content" name="content" placeholder="Description du document..." rows="3"></textarea>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="extracted-doc-type">Type de document <span class="text-danger">*</span></label>
-                            <select class="form-control select-control" id="extracted-doc-type" name="doc_type" required>
-                                <option value="">Sélectionnez un type</option>
-                                {% for type_id, type_config in document_types.items() %}
-                                    <option value="{{ type_id }}">{{ type_config.name }} - {{ type_config.description }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        {% if user_products|length > 0 %}
-                        <div class="form-group">
-                            <label for="extracted-product-ids">Produits associés (optionnel)</label>
-                            <select class="form-control" id="extracted-product-ids" name="product_ids" multiple>
-                                {% for product in user_products %}
-                                    <option value="{{ product.id }}">{{ product.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <div class="form-text text-sm text-secondary">
-                                Maintenez Ctrl/Cmd pour sélectionner plusieurs produits
-                            </div>
-                        </div>
-                        {% endif %}
-                        
-                        <input type="hidden" name="user_id" value="{{ current_user.id }}">
-                    </form>
-                    
-                    <div class="extraction-result" id="extraction-result" style="display: none;">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            <span>Nous n'avons pas pu extraire automatiquement les informations. Veuillez les saisir manuellement.</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between gap-md mt-lg">
-                        <button class="btn btn-secondary" onclick="backToUpload()">
-                            <i class="fas fa-arrow-left"></i> Retour
-                        </button>
-                        <button class="btn btn-primary" onclick="saveExtractedDocument()">
-                            <i class="fas fa-check"></i> Valider et ajouter
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Étape 3: Confirmation -->
-                <div id="step3-confirm" class="step-content" style="display: none;">
-                    <div class="step-indicator">
-                        <div class="step completed">
-                            <div class="step-number"><i class="fas fa-check"></i></div>
-                            <span class="step-label">Upload</span>
-                        </div>
-                        <div class="step completed">
-                            <div class="step-number"><i class="fas fa-check"></i></div>
-                            <span class="step-label">Vérification</span>
-                        </div>
-                        <div class="step active">
-                            <div class="step-number">3</div>
-                            <span class="step-label">Validation</span>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center py-2xl">
-                        <i class="fas fa-check-circle text-success" style="font-size: 4rem; margin-bottom: var(--spacing-lg);"></i>
-                        <h3>Document ajouté avec succès !</h3>
-                        <p class="text-secondary mt-md">
-                            Votre document a été ajouté à la base de données.<br>
-                            Vous pouvez maintenant le consulter dans la liste des documents.
-                        </p>
-                        <button class="btn btn-primary mt-lg" onclick="closeModal(); location.reload();">
-                            <i class="fas fa-check"></i> Terminer
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            const modalFooter = `
-                <button class="btn btn-secondary" onclick="closeModal()">
-                    <i class="fas fa-times"></i> Annuler
-                </button>
-            `;
-            
-            // Ouvrir le modal avec le contenu
-            openModal('<i class="fas fa-upload me-md"></i> Ajouter un document', modalContent, modalFooter);
-            
-            // Réinitialiser l'interface après l'ouverture
-            document.getElementById('step1-upload').style.display = 'block';
-            document.getElementById('step2-review').style.display = 'none';
-            document.getElementById('step3-confirm').style.display = 'none';
-            
-            // Réinitialiser les champs
-            document.getElementById('file-upload-input').value = '';
-            document.getElementById('file-preview').classList.remove('visible');
-            document.getElementById('extract-btn').disabled = true;
-            document.getElementById('extraction-progress').classList.remove('visible');
-            if (document.getElementById('extracted-info-form')) {
-                document.getElementById('extracted-info-form').reset();
-                document.getElementById('extracted-info-form').style.display = 'none';
-            }
-            document.getElementById('extraction-result').style.display = 'none';
-        }
-        
-        // Fermer le modal
-        function closeAddDocumentModal() {
-            closeModal();
-        }
-        
-        // Gérer le drag and drop
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('file-upload-input');
-        
-        // Drag and drop events
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('drag-over');
-        });
-        
-        uploadArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('drag-over');
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('drag-over');
-            if (e.dataTransfer.files.length > 0) {
-                fileInput.files = e.dataTransfer.files;
-                handleFileUpload({ target: fileInput });
-            }
-        });
-        
-        // Gérer le sélection de fichier
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            // Vérifier la taille (16 Mo max)
-            const maxSize = 16 * 1024 * 1024; // 16 Mo
-            if (file.size > maxSize) {
-                flashMessage('Le fichier est trop volumineux (max 16 Mo)', 'error');
-                event.target.value = '';
-                return;
-            }
-            
-            // Vérifier l'extension
-            const ext = file.name.split('.').pop().toLowerCase();
-            const allowedExts = ['pdf'];
-            if (!allowedExts.includes(ext)) {
-                flashMessage('Seuls les fichiers PDF sont acceptés', 'error');
-                event.target.value = '';
-                return;
-            }
-            
-            // Stocker le fichier
-            currentFile = file;
-            
-            // Afficher l'aperçu
-            const preview = document.getElementById('file-preview');
-            document.getElementById('preview-filename').textContent = file.name;
-            document.getElementById('preview-size').textContent = formatFileSize(file.size);
-            preview.classList.add('visible');
-            
-            // Activer le bouton d'extraction
-            document.getElementById('extract-btn').disabled = false;
-        }
-        
-        // Supprimer le fichier sélectionné
-        function removeFile() {
-            currentFile = null;
-            document.getElementById('file-upload-input').value = '';
-            document.getElementById('file-preview').classList.remove('visible');
-            document.getElementById('extract-btn').disabled = true;
-        }
-        
-        // Extraire les informations du document
-        function extractDocumentInfo() {
-            if (!currentFile) {
-                flashMessage('Aucun fichier sélectionné', 'error');
-                return;
-            }
-            
-            // Afficher l'indicateur de progression
-            document.getElementById('step1-upload').style.display = 'none';
-            document.getElementById('step2-review').style.display = 'block';
-            document.getElementById('extraction-progress').classList.add('visible');
-            document.getElementById('extracted-info-form').style.display = 'none';
-            document.getElementById('extraction-result').style.display = 'none';
-            
-            // Créer FormData et envoyer à l'API
-            const formData = new FormData();
-            formData.append('file', currentFile);
-            
-            fetch('{{ url_for("api_extract_document") }}', {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + '{{ jwt_token }}'
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('extraction-progress').classList.remove('visible');
-                
-                if (data.success) {
-                    // Remplir les champs avec les données extraites
-                    extractedData = data.extracted;
-                    populateExtractedFields(data.extracted);
-                    document.getElementById('extracted-info-form').style.display = 'block';
-                } else {
-                    // Afficher un message d'erreur et permettre la saisie manuelle
-                    document.getElementById('extraction-result').style.display = 'block';
-                    document.getElementById('extracted-info-form').style.display = 'block';
-                    flashMessage(data.error || 'Erreur lors de l\'extraction', 'error');
-                }
-                
-                currentStep = 2;
-            })
-            .catch(error => {
-                document.getElementById('extraction-progress').classList.remove('visible');
-                flashMessage('Erreur de connexion au serveur', 'error');
-                document.getElementById('extracted-info-form').style.display = 'block';
-            });
-        }
-        
-        // Remplir les champs avec les données extraites
-        function populateExtractedFields(data) {
-            // Remplir les champs si les données existent
-            if (data.title) {
-                document.getElementById('extracted-title').value = data.title;
-            }
-            if (data.organisme_certificateur) {
-                document.getElementById('extracted-organisme').value = data.organisme_certificateur;
-            }
-            if (data.norme) {
-                document.getElementById('extracted-norme').value = data.norme;
-            }
-            if (data.date_peremption) {
-                document.getElementById('extracted-date').value = data.date_peremption;
-            }
-            if (data.entreprise_certifiee) {
-                document.getElementById('extracted-entreprise').value = data.entreprise_certifiee;
-            }
-            if (data.pays) {
-                document.getElementById('extracted-pays').value = data.pays;
-            }
-            if (data.adresse) {
-                document.getElementById('extracted-adresse').value = data.adresse;
-            }
-            if (data.url_telechargement) {
-                document.getElementById('extracted-url').value = data.url_telechargement;
-            }
-            if (data.content) {
-                document.getElementById('extracted-content').value = data.content.substring(0, 500);
-            }
-            
-            // Stocker le nom de fichier original
-            if (data.original_filename) {
-                document.getElementById('extracted-original-filename').value = data.original_filename;
-            }
-        }
-        
-        // Retour à l'étape 1
-        function backToUpload() {
-            currentStep = 1;
-            document.getElementById('step1-upload').style.display = 'block';
-            document.getElementById('step2-review').style.display = 'none';
-            document.getElementById('step3-confirm').style.display = 'none';
-        }
-        
-        // Sauvegarder le document avec les informations extraites/modifiées
-        function saveExtractedDocument() {
-            if (!currentFile) {
-                flashMessage('Aucun fichier sélectionné', 'error');
-                return;
-            }
-            
-            // Valider les champs requis
-            const title = document.getElementById('extracted-title').value.trim();
-            const organisme = document.getElementById('extracted-organisme').value.trim();
-            const norme = document.getElementById('extracted-norme').value.trim();
-            const datePeremption = document.getElementById('extracted-date').value.trim();
-            const entreprise = document.getElementById('extracted-entreprise').value.trim();
-            const pays = document.getElementById('extracted-pays').value.trim();
-            const adresse = document.getElementById('extracted-adresse').value.trim();
-            const docType = document.getElementById('extracted-doc-type').value.trim();
-            
-            if (!title) {
-                flashMessage('Le titre est obligatoire', 'error');
-                return;
-            }
-            if (!organisme) {
-                flashMessage('L\'organisme certificateur est obligatoire', 'error');
-                return;
-            }
-            if (!norme) {
-                flashMessage('Le type de norme est obligatoire', 'error');
-                return;
-            }
-            if (!datePeremption) {
-                flashMessage('La date de péremption est obligatoire', 'error');
-                return;
-            }
-            if (!entreprise) {
-                flashMessage('L\'entreprise certifiée est obligatoire', 'error');
-                return;
-            }
-            if (!pays) {
-                flashMessage('Le pays est obligatoire', 'error');
-                return;
-            }
-            if (!adresse) {
-                flashMessage('L\'adresse est obligatoire', 'error');
-                return;
-            }
-            if (!docType) {
-                flashMessage('Le type de document est obligatoire', 'error');
-                return;
-            }
-            
-            // Collecter toutes les données
-            const formData = new FormData();
-            formData.append('file', currentFile);
-            
-            // Ajouter les données JSON
-            const jsonData = {
-                title: title,
-                content: document.getElementById('extracted-content').value,
-                doc_type: document.getElementById('extracted-doc-type').value,
-                organisme_certificateur: document.getElementById('extracted-organisme').value,
-                norme: document.getElementById('extracted-norme').value,
-                date_peremption: document.getElementById('extracted-date').value,
-                entreprise_certifiee: document.getElementById('extracted-entreprise').value,
-                pays: document.getElementById('extracted-pays').value,
-                adresse: document.getElementById('extracted-adresse').value,
-                url_telechargement: document.getElementById('extracted-url').value,
-                product_ids: Array.from(document.getElementById('extracted-product-ids').selectedOptions).map(opt => opt.value)
-            };
-            
-            formData.append('json_data', JSON.stringify(jsonData));
-            
-            // Afficher l'étape de confirmation
-            document.getElementById('step2-review').style.display = 'none';
-            document.getElementById('step3-confirm').style.display = 'block';
-            currentStep = 3;
-            
-            // Envoyer à l'API
-            fetch('{{ url_for("api_save_extracted_document") }}', {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + '{{ jwt_token }}'
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Document sauvé avec succès
-                    flashMessage(data.message || 'Document ajouté avec succès !', 'success');
-                } else {
-                    // Erreur - revenir à l'étape 2
-                    flashMessage(data.error || 'Erreur lors de la sauvegarde', 'error');
-                    document.getElementById('step2-review').style.display = 'block';
-                    document.getElementById('step3-confirm').style.display = 'none';
-                }
-            })
-            .catch(error => {
-                flashMessage('Erreur de connexion au serveur', 'error');
-                document.getElementById('step2-review').style.display = 'block';
-                document.getElementById('step3-confirm').style.display = 'none';
-            });
-        }
-        
-        // Fonctions utilitaires
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' octets';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' Ko';
-            return (bytes / (1024 * 1024)).toFixed(2) + ' Mo';
-        }
-        
-        function flashMessage(message, type) {
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> <span>${message}</span>`;
-            document.querySelector('.modal-body').prepend(alert);
-            setTimeout(() => alert.remove(), 5000);
-        }
-        
         // Toggle document expand/collapse
         function toggleDocument(docId) {
             const content = document.getElementById('content-' + docId);

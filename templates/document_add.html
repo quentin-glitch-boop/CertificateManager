@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+
+{% block title %}Ajouter un document - CertiFlow{% endblock %}
+{% block breadcrumb_title %}Ajouter un document{% endblock %}
+
+{% block extra_css %}
+<style>
+    .step-content { display: none; }
+    .step-content.active { display: block; }
+    .step { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-xs); }
+    .step-indicator { display: flex; justify-content: center; gap: var(--spacing-xl); margin-bottom: var(--spacing-xl); }
+    .step-number { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: var(--font-size-sm); }
+    .step.active .step-number { background: var(--primary); color: white; }
+    .step.completed .step-number { background: var(--success); color: white; }
+    .step-label { font-size: var(--font-size-xs); color: var(--text-secondary); }
+    
+    .upload-area { 
+        border: 2px dashed var(--border-light); 
+        border-radius: var(--border-radius); 
+        padding: var(--spacing-xl); 
+        text-align: center; 
+        cursor: pointer; 
+        transition: all 0.3s ease; 
+        margin-bottom: var(--spacing-md); 
+    }
+    .upload-area:hover, .upload-area.drag-over {
+        border-color: var(--primary);
+        background: rgba(0, 51, 102, 0.05);
+    }
+    .upload-icon { font-size: 3rem; color: var(--primary); margin-bottom: var(--spacing-md); }
+    .upload-instructions { color: var(--text-secondary); margin-bottom: var(--spacing-sm); }
+    .upload-hint { font-size: var(--font-size-xs); color: var(--text-light); }
+    .file-preview { 
+        background: var(--background); 
+        border: 1px solid var(--border-light); 
+        border-radius: var(--border-radius);
+        padding: var(--spacing-md);
+        display: none;
+    }
+    .file-preview.visible { display: block; }
+    
+    .extracted-field { margin-bottom: var(--spacing-md); }
+    .textarea-control { resize: vertical; min-height: 80px; }
+    .select-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+    
+    .extraction-progress { display: none; text-align: center; padding: var(--spacing-xl); }
+    .extraction-progress.visible { display: block; }
+    .spinner { 
+        border: 3px solid var(--border-light); 
+        border-top: 3px solid var(--primary); 
+        border-radius: 50%; 
+        width: 40px; 
+        height: 40px; 
+        animation: spin 1s linear infinite; 
+        margin: 0 auto var(--spacing-md);
+    }
+    @keyframes spin { 
+        0% { transform: rotate(0deg); } 
+        100% { transform: rotate(360deg); } 
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header mb-lg">
+        <h1><i class="fas fa-plus-circle me-md"></i> Ajouter un document</h1>
+        <p class="text-secondary">Suivez les étapes pour ajouter un nouveau certificat ou document</p>
+    </div>
+
+    <div class="max-w-2xl mx-auto">
+        <!-- Étape 1: Upload du fichier -->
+        <div id="step1-upload" class="step-content active">
+            <div class="step-indicator">
+                <div class="step active">
+                    <div class="step-number">1</div>
+                    <span class="step-label">Upload</span>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <span class="step-label">Vérification</span>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <span class="step-label">Validation</span>
+                </div>
+            </div>
+            
+            <div class="card mb-lg">
+                <div class="card-body">
+                    <div class="upload-area" id="upload-area" onclick="document.getElementById('file-upload-input').click()">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <div class="upload-instructions">Glissez-déposez votre fichier ici ou cliquez pour sélectionner</div>
+                        <div class="upload-hint">PDF uniquement (max 16 Mo)</div>
+                        <input type="file" id="file-upload-input" accept=".pdf" style="display: none;" onchange="handleFileUpload(event)">
+                    </div>
+                    
+                    <div id="file-preview" class="file-preview">
+                        <div class="flex items-center gap-md">
+                            <i class="fas fa-file-pdf text-danger" style="font-size: 2rem;"></i>
+                            <div class="flex-1">
+                                <div class="font-weight-600" id="preview-filename"></div>
+                                <div class="text-sm text-secondary" id="preview-size"></div>
+                            </div>
+                            <button class="btn btn-sm btn-danger" onclick="removeFile()">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-md mt-lg">
+                        <a href="{{ url_for('documents') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Annuler
+                        </a>
+                        <button class="btn btn-primary" onclick="extractDocumentInfo()" id="extract-btn" disabled>
+                            <i class="fas fa-magic"></i> Extraire les informations
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Étape 2: Vérification des informations extraites -->
+        <div id="step2-review" class="step-content">
+            <div class="step-indicator">
+                <div class="step completed">
+                    <div class="step-number"><i class="fas fa-check"></i></div>
+                    <span class="step-label">Upload</span>
+                </div>
+                <div class="step active">
+                    <div class="step-number">2</div>
+                    <span class="step-label">Vérification</span>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <span class="step-label">Validation</span>
+                </div>
+            </div>
+            
+            <div class="card mb-lg">
+                <div class="card-body">
+                    <div class="extraction-progress" id="extraction-progress">
+                        <div class="spinner"></div>
+                        <div>Extraction en cours...</div>
+                        <div class="text-sm text-secondary">Cela peut prendre quelques secondes</div>
+                    </div>
+                    
+                    <form id="extracted-info-form" action="{{ url_for('add') }}" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" id="extracted-original-filename" name="original_filename">
+                        
+                        <div class="form-group">
+                            <label for="extracted-title">Titre <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="extracted-title" name="title" required>
+                        </div>
+                        
+                        <div class="extracted-fields" id="extracted-fields-container">
+                            <div class="extracted-field">
+                                <label for="extracted-organisme"><i class="fas fa-certificate me-xs"></i> Organisme Certificateur <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="extracted-organisme" name="organisme_certificateur" placeholder="Ex: Bureau Veritas, AFNOR, etc." required>
+                            </div>
+                            
+                            <div class="extracted-field">
+                                <label for="extracted-norme"><i class="fas fa-book me-xs"></i> Norme <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="extracted-norme" name="norme" placeholder="Ex: ISO 9001:2015, EN 1090, etc." required>
+                            </div>
+                            
+                            <div class="extracted-field">
+                                <label for="extracted-date"><i class="fas fa-calendar me-xs"></i> Date de péremption <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="extracted-date" name="date_peremption" required>
+                            </div>
+                            
+                            <div class="extracted-field">
+                                <label for="extracted-entreprise"><i class="fas fa-building me-xs"></i> Entreprise Certifiée <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="extracted-entreprise" name="entreprise_certifiee" placeholder="Nom de l'entreprise" required>
+                            </div>
+                            
+                            <div class="extracted-field">
+                                <label for="extracted-pays"><i class="fas fa-globe me-xs"></i> Pays <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="extracted-pays" name="pays" placeholder="Ex: France, Belgique, etc." required>
+                            </div>
+                            
+                            <div class="extracted-field">
+                                <label for="extracted-adresse"><i class="fas fa-map-marker-alt me-xs"></i> Adresse <span class="text-danger">*</span></label>
+                                <textarea class="form-control textarea-control" id="extracted-adresse" name="adresse" placeholder="Adresse complète..." rows="2" required></textarea>
+                            </div>
+                            
+                            <div class="extracted-field">
+                                <label for="extracted-url"><i class="fas fa-link me-xs"></i> URL de téléchargement (optionnel)</label>
+                                <input type="url" class="form-control" id="extracted-url" name="url_telechargement" placeholder="https://exemple.com/certificat.pdf">
+                            </div>
+                            
+                            <div class="extracted-field">
+                                <label for="extracted-content"><i class="fas fa-align-left me-xs"></i> Description / Contenu (optionnel)</label>
+                                <textarea class="form-control textarea-control" id="extracted-content" name="content" placeholder="Description du document..." rows="3"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="extracted-doc-type"><i class="fas fa-tag me-xs"></i> Type de document <span class="text-danger">*</span></label>
+                            <select class="form-control select-control" id="extracted-doc-type" name="doc_type" required>
+                                <option value="">Sélectionnez un type</option>
+                                {% for type_id, type_config in document_types.items() %}
+                                    <option value="{{ type_id }}">{{ type_config.name }} - {{ type_config.description }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        {% if user_products|length > 0 %}
+                        <div class="form-group">
+                            <label for="extracted-product-ids"><i class="fas fa-box me-xs"></i> Produits associés (optionnel)</label>
+                            <select class="form-control" id="extracted-product-ids" name="product_ids" multiple>
+                                {% for product in user_products %}
+                                    <option value="{{ product.id }}">{{ product.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text text-sm text-secondary">
+                                Maintenez Ctrl/Cmd pour sélectionner plusieurs produits
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <input type="hidden" name="user_id" value="{{ current_user.id }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    </form>
+                    
+                    <div class="extraction-result" id="extraction-result" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Nous n'avons pas pu extraire automatiquement les informations. Veuillez les saisir manuellement.</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between gap-md mt-lg">
+                        <button class="btn btn-secondary" onclick="backToUpload()">
+                            <i class="fas fa-arrow-left"></i> Retour
+                        </button>
+                        <button class="btn btn-primary" onclick="saveExtractedDocument()">
+                            <i class="fas fa-check"></i> Valider et ajouter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Étape 3: Confirmation -->
+        <div id="step3-confirm" class="step-content">
+            <div class="step-indicator">
+                <div class="step completed">
+                    <div class="step-number"><i class="fas fa-check"></i></div>
+                    <span class="step-label">Upload</span>
+                </div>
+                <div class="step completed">
+                    <div class="step-number"><i class="fas fa-check"></i></div>
+                    <span class="step-label">Vérification</span>
+                </div>
+                <div class="step active">
+                    <div class="step-number">3</div>
+                    <span class="step-label">Validation</span>
+                </div>
+            </div>
+            
+            <div class="card mb-lg">
+                <div class="card-body text-center py-2xl">
+                    <i class="fas fa-check-circle text-success" style="font-size: 4rem; margin-bottom: var(--spacing-lg);"></i>
+                    <h3>Document ajouté avec succès !</h3>
+                    <p class="text-secondary mt-md">
+                        Votre document a été ajouté à la base de données.<br>
+                        Vous pouvez maintenant le consulter dans la liste des documents.
+                    </p>
+                    <a href="{{ url_for('documents') }}" class="btn btn-primary mt-lg">
+                        <i class="fas fa-check"></i> Retour à la liste des documents
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variables globales pour le workflow d'ajout
+    let currentFile = null;
+    let extractedData = null;
+    let currentStep = 1;
+    
+    // Formater la taille du fichier
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 octets';
+        const k = 1024;
+        const sizes = ['octets', 'Ko', 'Mo', 'Go'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Afficher un message flash
+    function flashMessage(message, type = 'info') {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible`;
+        alert.style.position = 'fixed';
+        alert.style.top = '20px';
+        alert.style.right = '20px';
+        alert.style.zIndex = '9999';
+        alert.style.maxWidth = '400px';
+        alert.innerHTML = `
+            <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+            <span class="ms-sm">${message}</span>
+            <button type="button" class="btn-close ms-md" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alert);
+        
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            alert.style.transition = 'opacity 0.5s';
+            setTimeout(() => alert.remove(), 500);
+        }, 3000);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alert.parentNode) alert.remove();
+        }, 5000);
+    }
+    
+    // Gérer le drag and drop
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-upload-input');
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+    
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            handleFileUpload({ target: fileInput });
+        }
+    });
+    
+    // Gérer le sélection de fichier
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        // Vérifier la taille (16 Mo max)
+        const maxSize = 16 * 1024 * 1024; // 16 Mo
+        if (file.size > maxSize) {
+            flashMessage('Le fichier est trop volumineux (max 16 Mo)', 'error');
+            event.target.value = '';
+            return;
+        }
+        
+        // Vérifier l'extension
+        const ext = file.name.split('.').pop().toLowerCase();
+        const allowedExts = ['pdf'];
+        if (!allowedExts.includes(ext)) {
+            flashMessage('Seuls les fichiers PDF sont acceptés', 'error');
+            event.target.value = '';
+            return;
+        }
+        
+        // Stocker le fichier
+        currentFile = file;
+        
+        // Afficher l'aperçu
+        const preview = document.getElementById('file-preview');
+        document.getElementById('preview-filename').textContent = file.name;
+        document.getElementById('preview-size').textContent = formatFileSize(file.size);
+        preview.classList.add('visible');
+        
+        // Activer le bouton d'extraction
+        document.getElementById('extract-btn').disabled = false;
+    }
+    
+    // Supprimer le fichier sélectionné
+    function removeFile() {
+        currentFile = null;
+        document.getElementById('file-upload-input').value = '';
+        document.getElementById('file-preview').classList.remove('visible');
+        document.getElementById('extract-btn').disabled = true;
+    }
+    
+    // Remplir les champs avec les données extraites
+    function populateExtractedFields(data) {
+        document.getElementById('extracted-title').value = data.title || '';
+        document.getElementById('extracted-organisme').value = data.organisme_certificateur || '';
+        document.getElementById('extracted-norme').value = data.norme || '';
+        document.getElementById('extracted-date').value = data.date_peremption || '';
+        document.getElementById('extracted-entreprise').value = data.entreprise_certifiee || '';
+        document.getElementById('extracted-pays').value = data.pays || '';
+        document.getElementById('extracted-adresse').value = data.adresse || '';
+        document.getElementById('extracted-url').value = data.url_telechargement || '';
+        document.getElementById('extracted-content').value = data.content || '';
+        document.getElementById('extracted-original-filename').value = currentFile ? currentFile.name : '';
+        
+        // Sélectionner le type de document
+        const docTypeSelect = document.getElementById('extracted-doc-type');
+        if (data.doc_type) {
+            for (let i = 0; i < docTypeSelect.options.length; i++) {
+                if (docTypeSelect.options[i].value === data.doc_type) {
+                    docTypeSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Extraire les informations du document
+    function extractDocumentInfo() {
+        if (!currentFile) {
+            flashMessage('Aucun fichier sélectionné', 'error');
+            return;
+        }
+        
+        // Afficher l'indicateur de progression
+        document.getElementById('step1-upload').classList.remove('active');
+        document.getElementById('step2-review').classList.add('active');
+        document.getElementById('extraction-progress').classList.add('visible');
+        document.getElementById('extracted-info-form').style.display = 'none';
+        document.getElementById('extraction-result').style.display = 'none';
+        
+        // Créer FormData et envoyer à l'API
+        const formData = new FormData();
+        formData.append('file', currentFile);
+        
+        fetch('{{ url_for("api_extract_document") }}', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + '{{ jwt_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('extraction-progress').classList.remove('visible');
+            
+            if (data.success) {
+                // Remplir les champs avec les données extraites
+                extractedData = data.extracted;
+                populateExtractedFields(data.extracted);
+                document.getElementById('extracted-info-form').style.display = 'block';
+            } else {
+                // Afficher un message d'erreur et permettre la saisie manuelle
+                document.getElementById('extraction-result').style.display = 'block';
+                document.getElementById('extracted-info-form').style.display = 'block';
+                flashMessage(data.error || "Erreur lors de l'extraction", 'error');
+            }
+            
+            currentStep = 2;
+        })
+        .catch(error => {
+            document.getElementById('extraction-progress').classList.remove('visible');
+            document.getElementById('extraction-result').style.display = 'block';
+            document.getElementById('extracted-info-form').style.display = 'block';
+            flashMessage("Erreur lors de l'extraction: " + error.message, 'error');
+        });
+    }
+    
+    // Retour à l'étape d'upload
+    function backToUpload() {
+        currentStep = 1;
+        document.getElementById('step2-review').classList.remove('active');
+        document.getElementById('step1-upload').classList.add('active');
+        currentFile = null;
+        document.getElementById('file-upload-input').value = '';
+        document.getElementById('file-preview').classList.remove('visible');
+        document.getElementById('extract-btn').disabled = true;
+    }
+    
+    // Sauvegarder le document
+    function saveExtractedDocument() {
+        const form = document.getElementById('extracted-info-form');
+        const formData = new FormData(form);
+        
+        // Ajouter le fichier
+        if (currentFile) {
+            formData.append('pdf', currentFile);
+        }
+        
+        // Valider les champs requis
+        const requiredFields = ['title', 'organisme_certificateur', 'norme', 'date_peremption', 'entreprise_certifiee', 'pays', 'adresse', 'doc_type'];
+        let isValid = true;
+        for (const field of requiredFields) {
+            const element = document.getElementById(`extracted-${field}`);
+            if (!element || !element.value.trim()) {
+                isValid = false;
+                element.classList.add('is-invalid');
+            } else {
+                element.classList.remove('is-invalid');
+            }
+        }
+        
+        if (!isValid) {
+            flashMessage('Veuillez remplir tous les champs obligatoires', 'error');
+            return;
+        }
+        
+        fetch('{{ url_for("add") }}', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + '{{ jwt_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Passer à l'étape 3
+                currentStep = 3;
+                document.getElementById('step2-review').classList.remove('active');
+                document.getElementById('step3-confirm').classList.add('active');
+            } else {
+                flashMessage(data.error || 'Erreur lors de l\'ajout du document', 'error');
+            }
+        })
+        .catch(error => {
+            flashMessage('Erreur lors de l\'ajout: ' + error.message, 'error');
+        });
+    }
+    
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', () => {
+        // Définir le jeton JWT pour les requêtes
+        window.jwt_token = '{{ jwt_token }}';
+    });
+</script>
+{% endblock %}

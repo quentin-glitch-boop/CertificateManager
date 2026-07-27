@@ -87,8 +87,12 @@ class UserDB(db.Model):
     created_at = db.Column(db.DateTime, server_default=func.now())
 
     # Relationships
-    documents = db.relationship("DocumentDB", backref="owner", lazy=True, cascade="all, delete-orphan")
-    dashboard_configs = db.relationship("DashboardConfigDB", backref="user", lazy=True, cascade="all, delete-orphan")
+    documents = db.relationship(
+        "DocumentDB", backref="owner", lazy=True, cascade="all, delete-orphan"
+    )
+    dashboard_configs = db.relationship(
+        "DashboardConfigDB", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
 
 
 class DocumentDB(db.Model):
@@ -120,7 +124,9 @@ class DashboardConfigDB(db.Model):
     created_at = db.Column(db.DateTime, server_default=func.now())
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
 
-    __table_args__ = (db.UniqueConstraint("user_id", "config_name", name="uq_user_config"),)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "config_name", name="uq_user_config"),
+    )
 
 
 # ============================================================================
@@ -143,10 +149,15 @@ class ProductDB(db.Model):
     # Relationships
     user = db.relationship("UserDB", backref="products")
     documents = db.relationship(
-        "DocumentDB", secondary="product_document", backref=db.backref("products", lazy=True), lazy=True
+        "DocumentDB",
+        secondary="product_document",
+        backref=db.backref("products", lazy=True),
+        lazy=True,
     )
 
-    __table_args__ = (db.UniqueConstraint("user_id", "name", name="uq_user_product_name"),)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "name", name="uq_user_product_name"),
+    )
 
 
 class ProductDocumentDB(db.Model):
@@ -158,7 +169,9 @@ class ProductDocumentDB(db.Model):
     document_id = db.Column(db.Integer, db.ForeignKey("documents.id"), primary_key=True)
     created_at = db.Column(db.DateTime, server_default=func.now())
 
-    __table_args__ = (db.UniqueConstraint("product_id", "document_id", name="uq_product_document"),)
+    __table_args__ = (
+        db.UniqueConstraint("product_id", "document_id", name="uq_product_document"),
+    )
 
 
 class GeocodeCacheDB(db.Model):
@@ -182,7 +195,9 @@ class GeocodeCacheDB(db.Model):
 app = Flask(__name__)
 
 # Load secret key from environment or use default
-app.secret_key = os.environ.get("SECRET_KEY", "ta_cle_secrete_ic123456_changez_la_en_production")
+app.secret_key = os.environ.get(
+    "SECRET_KEY", "ta_cle_secrete_ic123456_changez_la_en_production"
+)
 
 # Configure SQLAlchemy
 DATABASE_URL = os.environ.get(
@@ -205,7 +220,9 @@ with app.app_context():
     db.create_all()
 
 # Configuration
-UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", os.path.join(os.path.dirname(__file__), "static", "uploads"))
+UPLOAD_FOLDER = os.environ.get(
+    "UPLOAD_FOLDER", os.path.join(os.path.dirname(__file__), "static", "uploads")
+)
 ALLOWED_EXTENSIONS = {"pdf"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -240,7 +257,11 @@ try:
 
     def start_scheduler():
         """Start the scheduler if not already running and not in testing mode"""
-        if hasattr(app, "scheduler") and app.scheduler and not app.config.get("TESTING", False):
+        if (
+            hasattr(app, "scheduler")
+            and app.scheduler
+            and not app.config.get("TESTING", False)
+        ):
             if not app.scheduler.running:
                 app.scheduler.start()
 
@@ -412,12 +433,16 @@ def validate_document_attributes(type_name, attributes):
                 try:
                     datetime.strptime(value, "%Y-%m-%d")
                 except ValueError:
-                    errors.append(f"{attr_schema[attr_name]['label']} doit etre une date valide (YYYY-MM-DD)")
+                    errors.append(
+                        f"{attr_schema[attr_name]['label']} doit etre une date valide (YYYY-MM-DD)"
+                    )
             elif expected_type == "number" and value:
                 try:
                     float(value)
                 except ValueError:
-                    errors.append(f"{attr_schema[attr_name]['label']} doit etre un nombre")
+                    errors.append(
+                        f"{attr_schema[attr_name]['label']} doit etre un nombre"
+                    )
 
     return len(errors) == 0, errors
 
@@ -449,7 +474,9 @@ def init_db():
             db.session.commit()
 
         # Mettre à jour les utilisateurs existants sans password
-        users_without_pass = UserDB.query.filter(or_(UserDB.password.is_(None), UserDB.password == "")).all()
+        users_without_pass = UserDB.query.filter(
+            or_(UserDB.password.is_(None), UserDB.password == "")
+        ).all()
 
         for user in users_without_pass:
             # Générer un mot de passe par défaut (username + '123')
@@ -517,7 +544,9 @@ def geocode_address(address, use_cache=True):
 
     # Normaliser l'adresse (minuscules, sans accents)
     normalized_addr = unicodedata.normalize("NFKD", address.lower())
-    normalized_addr = "".join(c for c in normalized_addr if not unicodedata.combining(c))
+    normalized_addr = "".join(
+        c for c in normalized_addr if not unicodedata.combining(c)
+    )
 
     # Vérifier le cache d'abord
     if use_cache:
@@ -624,7 +653,9 @@ def _save_to_geocode_cache(address, latitude, longitude):
             cache_entry.longitude = longitude
             cache_entry.accessed_at = func.now()
         else:
-            cache_entry = GeocodeCacheDB(address=address, latitude=latitude, longitude=longitude)
+            cache_entry = GeocodeCacheDB(
+                address=address, latitude=latitude, longitude=longitude
+            )
             db.session.add(cache_entry)
         db.session.commit()
     except Exception as e:
@@ -714,7 +745,9 @@ def get_user_dashboard_config(user_id, config_name="default"):
     Si elle n'existe pas, crée et retourne la configuration par défaut.
     """
     # Try to find existing config
-    config_db = DashboardConfigDB.query.filter_by(user_id=user_id, config_name=config_name).first()
+    config_db = DashboardConfigDB.query.filter_by(
+        user_id=user_id, config_name=config_name
+    ).first()
 
     if config_db:
         config = {
@@ -742,7 +775,9 @@ def get_user_dashboard_config(user_id, config_name="default"):
 def save_user_dashboard_config(user_id, config_name, config):
     """Sauvegarde la configuration du dashboard pour un utilisateur"""
     # Check if config exists
-    config_db = DashboardConfigDB.query.filter_by(user_id=user_id, config_name=config_name).first()
+    config_db = DashboardConfigDB.query.filter_by(
+        user_id=user_id, config_name=config_name
+    ).first()
 
     if config_db:
         # Update existing
@@ -781,7 +816,9 @@ def get_user_dashboard_configs(user_id):
     # Query all configs for this user
     configs = (
         DashboardConfigDB.query.filter_by(user_id=user_id)
-        .order_by(desc(DashboardConfigDB.is_default), desc(DashboardConfigDB.updated_at))
+        .order_by(
+            desc(DashboardConfigDB.is_default), desc(DashboardConfigDB.updated_at)
+        )
         .all()
     )
 
@@ -837,7 +874,9 @@ def _prepare_timeline_data(documents):
                 {
                     "id": doc["id"],
                     "title": doc["title"],
-                    "societe": doc["attributes"].get("entreprise_certifiee", "Inconnue"),
+                    "societe": doc["attributes"].get(
+                        "entreprise_certifiee", "Inconnue"
+                    ),
                     "is_expired": date_peremption < str(date.today()),
                     "date_peremption": date_peremption,
                 }
@@ -892,7 +931,9 @@ def _prepare_map_data(documents):
                             "adresse": attrs.get("adresse", ""),
                             "date_peremption": date_peremption or "",
                             "is_expired": is_expired,
-                            "organisme_certificateur": attrs.get("organisme_certificateur", ""),
+                            "organisme_certificateur": attrs.get(
+                                "organisme_certificateur", ""
+                            ),
                         },
                         "geometry": {
                             "type": "Point",
@@ -912,7 +953,8 @@ def _prepare_stats_data(documents):
     expired = sum(
         1
         for d in documents
-        if d["attributes"].get("date_peremption", "") and d["attributes"]["date_peremption"] < str(date.today())
+        if d["attributes"].get("date_peremption", "")
+        and d["attributes"]["date_peremption"] < str(date.today())
     )
     valid = total - expired
 
@@ -955,7 +997,9 @@ def _prepare_alerts_data(documents):
                         {
                             "id": doc["id"],
                             "title": doc["title"],
-                            "societe": doc["attributes"].get("entreprise_certifiee", "Inconnue"),
+                            "societe": doc["attributes"].get(
+                                "entreprise_certifiee", "Inconnue"
+                            ),
                             "date_peremption": date_peremption_str,
                             "days_remaining": days_until_expiry,
                             "is_expired": validity < today,
@@ -985,9 +1029,9 @@ def get_all_documents_for_user(user_id=None, user_role=None):
     """
     # Build query based on user role
     if user_role == "admin":
-        documents_query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).order_by(
-            DocumentDB.upload_date.desc()
-        )
+        documents_query = DocumentDB.query.join(
+            UserDB, DocumentDB.user_id == UserDB.id
+        ).order_by(DocumentDB.upload_date.desc())
     else:
         documents_query = (
             DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id)
@@ -1200,14 +1244,24 @@ def documents():
     # Trier chaque groupe par date de péremption décroissante (le plus récent en premier)
     for group_key in grouped_documents:
         grouped_documents[group_key].sort(
-            key=lambda x: (x["date_peremption"] is None or x["date_peremption"] == "", x["date_peremption"]),
+            key=lambda x: (
+                x["date_peremption"] is None or x["date_peremption"] == "",
+                x["date_peremption"],
+            ),
             reverse=True,
         )
 
     # Convertir en liste de groupes triés par entreprise, puis adresse, puis norme
     sorted_groups = []
     for (entreprise, adresse, norme), docs in grouped_documents.items():
-        sorted_groups.append({"entreprise": entreprise, "adresse": adresse, "norme": norme, "documents": docs})
+        sorted_groups.append(
+            {
+                "entreprise": entreprise,
+                "adresse": adresse,
+                "norme": norme,
+                "documents": docs,
+            }
+        )
 
     # Trier les groupes par entreprise, puis adresse, puis norme
     sorted_groups.sort(key=lambda x: (x["entreprise"], x["adresse"], x["norme"]))
@@ -1238,11 +1292,19 @@ def documents():
             self.total_items = total_items
 
     paginated_documents = SimplePagination(
-        page=page, per_page=per_page, total=total_groups, items=paginated_groups, total_items=total_items
+        page=page,
+        per_page=per_page,
+        total=total_groups,
+        items=paginated_groups,
+        total_items=total_items,
     )
 
     # Récupérer les produits de l'utilisateur pour le sélecteur
-    user_products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
+    user_products = (
+        ProductDB.query.filter_by(user_id=current_user.id)
+        .order_by(ProductDB.name)
+        .all()
+    )
 
     return render_template(
         "index.html",
@@ -1311,7 +1373,9 @@ def set_language_route(lang):
             session["language"] = lang
             # Create response with cookie
             next_url = request.args.get("next", url_for("documents"))
-            resp = make_response(redirect(next_url, code=303))  # 303 See Other pour forcer une requête GET fraîche
+            resp = make_response(
+                redirect(next_url, code=303)
+            )  # 303 See Other pour forcer une requête GET fraîche
             resp.set_cookie("language", lang, max_age=60 * 60 * 24 * 365)  # 1 year
             # Also set in session via set_lang
             set_lang(lang)
@@ -1394,7 +1458,10 @@ def api_save_extracted_document():
         file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(file_path)
     except Exception as e:
-        return jsonify({"success": False, "error": f"Erreur lors de l'upload: {str(e)}"}), 500
+        return (
+            jsonify({"success": False, "error": f"Erreur lors de l'upload: {str(e)}"}),
+            500,
+        )
 
     # Récupérer les données JSON
     json_data_str = request.form.get("json_data", "{}")
@@ -1420,19 +1487,37 @@ def api_save_extracted_document():
     if not title:
         return jsonify({"success": False, "error": "Le titre est obligatoire"}), 400
     if not organisme_certificateur:
-        return jsonify({"success": False, "error": "L'organisme certificateur est obligatoire"}), 400
+        return (
+            jsonify(
+                {"success": False, "error": "L'organisme certificateur est obligatoire"}
+            ),
+            400,
+        )
     if not norme:
         return jsonify({"success": False, "error": "La norme est obligatoire"}), 400
     if not date_peremption:
-        return jsonify({"success": False, "error": "La date de péremption est obligatoire"}), 400
+        return (
+            jsonify(
+                {"success": False, "error": "La date de péremption est obligatoire"}
+            ),
+            400,
+        )
     if not entreprise_certifiee:
-        return jsonify({"success": False, "error": "L'entreprise certifiée est obligatoire"}), 400
+        return (
+            jsonify(
+                {"success": False, "error": "L'entreprise certifiée est obligatoire"}
+            ),
+            400,
+        )
     if not pays:
         return jsonify({"success": False, "error": "Le pays est obligatoire"}), 400
     if not adresse:
         return jsonify({"success": False, "error": "L'adresse est obligatoire"}), 400
     if not doc_type:
-        return jsonify({"success": False, "error": "Le type de document est obligatoire"}), 400
+        return (
+            jsonify({"success": False, "error": "Le type de document est obligatoire"}),
+            400,
+        )
 
     # Construire les attributs à partir des champs extraits
     attributes = {}
@@ -1498,7 +1583,13 @@ def api_save_extracted_document():
                             db.session.add(relation)
             db.session.commit()
 
-        return jsonify({"success": True, "document_id": new_doc.id, "message": "Document ajouté avec succès !"})
+        return jsonify(
+            {
+                "success": True,
+                "document_id": new_doc.id,
+                "message": "Document ajouté avec succès !",
+            }
+        )
 
     except Exception as e:
         # Nettoyer le fichier si erreur
@@ -1507,13 +1598,46 @@ def api_save_extracted_document():
                 os.remove(file_path)
         except:
             pass
-        return jsonify({"success": False, "error": f"Erreur lors de la sauvegarde: {str(e)}"}), 500
+        return (
+            jsonify(
+                {"success": False, "error": f"Erreur lors de la sauvegarde: {str(e)}"}
+            ),
+            500,
+        )
 
 
 @app.route("/add", methods=["GET", "POST"])
 @login_required
 def add_document():
     """Ajouter un nouveau document"""
+    if request.method == "GET":
+        # Afficher le formulaire d'ajout de document
+        user_products = (
+            ProductDB.query.filter_by(user_id=current_user.id)
+            .order_by(ProductDB.name)
+            .all()
+        )
+
+        # Générer un token JWT pour les requêtes API
+        jwt_token = jwt.encode(
+            {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "role": current_user.role,
+                "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+            },
+            app.config["SECRET_KEY"],
+            algorithm="HS256",
+        )
+
+        return render_template(
+            "document_add.html",
+            current_user=current_user,
+            document_types=get_document_types(),
+            user_products=user_products,
+            jwt_token=jwt_token,
+        )
+
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         content = request.form.get("content", "").strip()
@@ -1537,7 +1661,10 @@ def add_document():
 
                 # Vérifier le MIME type (pour éviter les fichiers renommés)
                 # Skip in testing mode
-                if not app.config.get("TESTING", False) and file.content_type != "application/pdf":
+                if (
+                    not app.config.get("TESTING", False)
+                    and file.content_type != "application/pdf"
+                ):
                     flash("Le fichier doit être un PDF valide", "error")
                     return redirect(url_for("documents"))
 
@@ -1557,7 +1684,9 @@ def add_document():
         if doc_type:
             doc_type_config = get_document_type(doc_type)
             if doc_type_config:
-                for attr_name, attr_config in doc_type_config.get("attributes", {}).items():
+                for attr_name, attr_config in doc_type_config.get(
+                    "attributes", {}
+                ).items():
                     attr_value = request.form.get(f"doc_attr_{attr_name}", "").strip()
                     # Always include the attribute, even if empty (for optional fields)
                     attributes[attr_name] = attr_value
@@ -1736,7 +1865,9 @@ def admin_edit_user(user_id):
 
         try:
             # Check if new username already exists (excluding current user)
-            existing_user = UserDB.query.filter(UserDB.username == new_username, UserDB.id != user_id).first()
+            existing_user = UserDB.query.filter(
+                UserDB.username == new_username, UserDB.id != user_id
+            ).first()
             if existing_user:
                 flash("Ce nom d'utilisateur existe déjà", "error")
                 return redirect(url_for("admin_edit_user", user_id=user_id))
@@ -1747,7 +1878,9 @@ def admin_edit_user(user_id):
 
             if new_password:
                 if len(new_password) < 6:
-                    flash("Le mot de passe doit contenir au moins 6 caractères", "error")
+                    flash(
+                        "Le mot de passe doit contenir au moins 6 caractères", "error"
+                    )
                     return redirect(url_for("admin_edit_user", user_id=user_id))
                 user.password = generate_password_hash(new_password)
 
@@ -1860,15 +1993,22 @@ def admin_certificate_check_config():
                     )
                     flash(f"Fréquence mise à jour à {hours_int} heures !", "success")
                 except Exception as e:
-                    flash(f"Erreur lors de la mise à jour du scheduler: {str(e)}", "error")
+                    flash(
+                        f"Erreur lors de la mise à jour du scheduler: {str(e)}", "error"
+                    )
                     # Remettre l'ancienne valeur
                     os.environ["CHECK_FREQUENCY_HOURS"] = str(
-                        app.scheduler.get_job("certificate_auto_check").trigger.interval.hours
+                        app.scheduler.get_job(
+                            "certificate_auto_check"
+                        ).trigger.interval.hours
                         if app.scheduler.get_job("certificate_auto_check")
                         else 168
                     )
             else:
-                flash("Fréquence enregistrée (redémarrez l'application pour appliquer)", "success")
+                flash(
+                    "Fréquence enregistrée (redémarrez l'application pour appliquer)",
+                    "success",
+                )
 
         except ValueError:
             flash("Veuillez entrer un nombre entre 1 et 720 heures", "error")
@@ -1884,7 +2024,9 @@ def admin_certificate_check_config():
     except:
         current_frequency = 168
 
-    return render_template("admin/certificate_check_config.html", current_frequency=current_frequency)
+    return render_template(
+        "admin/certificate_check_config.html", current_frequency=current_frequency
+    )
 
 
 @app.route("/admin/certificate-check/run", methods=["POST"])
@@ -1945,7 +2087,11 @@ def operations_dashboard():
     widgets_info = DASHBOARD_WIDGETS
 
     # Récupérer les produits de l'utilisateur pour le filtre
-    user_products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
+    user_products = (
+        ProductDB.query.filter_by(user_id=current_user.id)
+        .order_by(ProductDB.name)
+        .all()
+    )
 
     # Récupérer le produit sélectionné depuis les query params ou la session
     selected_product_id = request.args.get("product_id", "")
@@ -1983,7 +2129,11 @@ def operations_dashboard():
 def my_products():
     """Liste des produits de l'utilisateur"""
     # Récupérer tous les produits de l'utilisateur
-    products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
+    products = (
+        ProductDB.query.filter_by(user_id=current_user.id)
+        .order_by(ProductDB.name)
+        .all()
+    )
 
     return render_template("products.html", products=products)
 
@@ -2004,7 +2154,9 @@ def add_product():
                 "products_add.html",
                 old_name=name,
                 old_description=description,
-                user_documents=DocumentDB.query.filter_by(user_id=current_user.id).all(),
+                user_documents=DocumentDB.query.filter_by(
+                    user_id=current_user.id
+                ).all(),
                 selected_doc_ids=[int(x) for x in document_ids if x.isdigit()],
             )
 
@@ -2016,7 +2168,9 @@ def add_product():
                 "products_add.html",
                 old_name=name,
                 old_description=description,
-                user_documents=DocumentDB.query.filter_by(user_id=current_user.id).all(),
+                user_documents=DocumentDB.query.filter_by(
+                    user_id=current_user.id
+                ).all(),
                 selected_doc_ids=[int(x) for x in document_ids if x.isdigit()],
             )
 
@@ -2097,7 +2251,9 @@ def edit_product(product_id):
 
         # Vérifier que le nom est unique pour cet utilisateur (sauf pour le produit actuel)
         existing = ProductDB.query.filter(
-            ProductDB.user_id == current_user.id, ProductDB.name == name, ProductDB.id != product_id
+            ProductDB.user_id == current_user.id,
+            ProductDB.name == name,
+            ProductDB.id != product_id,
         ).first()
         if existing:
             flash("Un produit avec ce nom existe déjà", "error")
@@ -2125,7 +2281,9 @@ def edit_product(product_id):
         # Supprimer les relations pour les documents non sélectionnés
         for doc_id in current_doc_ids:
             if doc_id not in selected_doc_ids:
-                relation = ProductDocumentDB.query.filter_by(product_id=product.id, document_id=doc_id).first()
+                relation = ProductDocumentDB.query.filter_by(
+                    product_id=product.id, document_id=doc_id
+                ).first()
                 if relation:
                     db.session.delete(relation)
 
@@ -2196,7 +2354,9 @@ def remove_document_from_product(product_id, document_id):
         abort(403)
 
     # Supprimer la relation
-    relation = ProductDocumentDB.query.filter_by(product_id=product_id, document_id=document_id).first()
+    relation = ProductDocumentDB.query.filter_by(
+        product_id=product_id, document_id=document_id
+    ).first()
 
     if relation:
         db.session.delete(relation)
@@ -2215,7 +2375,11 @@ def remove_document_from_product(product_id, document_id):
 @login_required
 def api_get_user_products():
     """Récupère la liste des produits de l'utilisateur"""
-    products = ProductDB.query.filter_by(user_id=current_user.id).order_by(ProductDB.name).all()
+    products = (
+        ProductDB.query.filter_by(user_id=current_user.id)
+        .order_by(ProductDB.name)
+        .all()
+    )
 
     products_list = []
     for product in products:
@@ -2225,7 +2389,9 @@ def api_get_user_products():
                 "name": product.name,
                 "description": product.description,
                 "document_count": len(product.documents),
-                "created_at": product.created_at.isoformat() if product.created_at else None,
+                "created_at": (
+                    product.created_at.isoformat() if product.created_at else None
+                ),
             }
         )
 
@@ -2285,7 +2451,12 @@ def api_save_dashboard_config():
     """Sauvegarde la configuration du dashboard"""
     data = request.get_json()
 
-    if not data or "config_name" not in data or "layout" not in data or "widgets" not in data:
+    if (
+        not data
+        or "config_name" not in data
+        or "layout" not in data
+        or "widgets" not in data
+    ):
         return jsonify({"error": "Missing required fields"}), 400
 
     config_name = data["config_name"]
@@ -2343,11 +2514,17 @@ def api_get_widget_data(widget_id):
 def api_get_all_widgets_data():
     """Récupère les données pour tous les widgets actifs"""
     config = get_user_dashboard_config(current_user.id)
-    active_widgets = {wid: info for wid, info in config.get("widgets", {}).items() if info.get("enabled", False)}
+    active_widgets = {
+        wid: info
+        for wid, info in config.get("widgets", {}).items()
+        if info.get("enabled", False)
+    }
 
     results = {}
     for widget_id in active_widgets:
-        results[widget_id] = get_dashboard_widget_data(widget_id, current_user.id, current_user.role)
+        results[widget_id] = get_dashboard_widget_data(
+            widget_id, current_user.id, current_user.role
+        )
 
     return jsonify(results)
 
@@ -2462,7 +2639,9 @@ def api_logout():
     """Déconnexion via API (invalide le token côté client)"""
     # Avec JWT, la déconnexion est gérée côté client
     # On pourrait ajouter le token à une blacklist, mais ce n'est pas implémenté ici
-    return jsonify({"message": "Successfully logged out. Please clear your token client-side."})
+    return jsonify(
+        {"message": "Successfully logged out. Please clear your token client-side."}
+    )
 
 
 @app.route("/api/documents", methods=["GET"])
@@ -2485,7 +2664,9 @@ def api_get_documents():
     if user_role == "admin":
         query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id)
     else:
-        query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).filter(DocumentDB.user_id == user_id)
+        query = DocumentDB.query.join(UserDB, DocumentDB.user_id == UserDB.id).filter(
+            DocumentDB.user_id == user_id
+        )
 
     # Filtrer par produit si un product_id est spécifié
     if product_id and product_id.isdigit():
@@ -2496,8 +2677,13 @@ def api_get_documents():
             if product:
                 if user_role == "admin" or product.user_id == user_id:
                     # Joindre avec la table product_document et filtrer
-                    query = query.join(ProductDocumentDB, DocumentDB.id == ProductDocumentDB.document_id)
-                    query = query.filter(ProductDocumentDB.product_id == int(product_id))
+                    query = query.join(
+                        ProductDocumentDB,
+                        DocumentDB.id == ProductDocumentDB.document_id,
+                    )
+                    query = query.filter(
+                        ProductDocumentDB.product_id == int(product_id)
+                    )
                     # Distinct pour éviter les doublons si un document est dans plusieurs produits
                     query = query.distinct()
                 else:
@@ -2544,7 +2730,9 @@ def api_get_documents():
                 "date_peremption": date_peremption,
                 "file_path": doc.file_path,
                 "file_url": (
-                    url_for("uploaded_file", filename=doc.file_path, _external=True) if doc.file_path else None
+                    url_for("uploaded_file", filename=doc.file_path, _external=True)
+                    if doc.file_path
+                    else None
                 ),
                 "author": doc.owner.username,
                 "type": doc.type,
@@ -2608,7 +2796,9 @@ def api_create_document():
         if doc_type:
             doc_type_config = get_document_type(doc_type)
             if doc_type_config:
-                for attr_name, attr_config in doc_type_config.get("attributes", {}).items():
+                for attr_name, attr_config in doc_type_config.get(
+                    "attributes", {}
+                ).items():
                     attr_value = data.get(attr_name, "").strip()
                     attributes[attr_name] = attr_value
 
